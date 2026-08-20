@@ -13,6 +13,7 @@ interface ImportRow {
   url?: string;
   categoria?: string;
   subcategoria?: string;
+  departamento?: string;
   tipo?: string;
   descripcion?: string;
   destacado?: string | boolean;
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
 
       // Resolver subcategoría por nombre (si se indicó y existe).
       let subcategoryId: string | null = null;
-      const subName = (row.subcategoria ?? "").trim();
+      const subName = (row.departamento ?? row.subcategoria ?? "").trim();
       if (subName) {
         const sub = category.subcategories.find(
           (s) => s.name.toLowerCase() === subName.toLowerCase(),

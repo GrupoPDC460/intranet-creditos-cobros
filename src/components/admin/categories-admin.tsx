@@ -312,7 +312,7 @@ export function CategoriesAdmin({
 
           <div className="sm:col-span-2">
             <div className="mb-2 flex items-center justify-between">
-              <label className="label mb-0">Subcategorías</label>
+              <label className="label mb-0">Departamentos</label>
               <button
                 onClick={addSub}
                 className="inline-flex items-center gap-1 text-sm text-brand-glow hover:underline"
@@ -323,7 +323,7 @@ export function CategoriesAdmin({
             <div className="space-y-2">
               {draft.subcategories.length === 0 && (
                 <p className="rounded-lg border border-dashed border-white/10 px-3 py-4 text-center text-sm text-muted">
-                  Sin subcategorías. Agrega las que necesites (Sistemas, Dashboards…).
+                  Sin departamentos. Agrega los que necesites (Cobros Venta Directa, Liquidaciones…).
                 </p>
               )}
               {draft.subcategories.map((s, i) => (
@@ -333,12 +333,12 @@ export function CategoriesAdmin({
                     className="field"
                     value={s.name}
                     onChange={(e) => setSub(i, e.target.value)}
-                    placeholder="Sistemas"
+                    placeholder="Cobros Venta Directa"
                   />
                   <button
                     onClick={() => removeSub(i)}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted hover:text-rose-300"
-                    aria-label="Quitar subcategoría"
+                    aria-label="Quitar departamento"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -361,7 +361,7 @@ export function CategoriesAdmin({
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Eliminar categoría"
-        message={`¿Eliminar “${toDelete?.name}”? Se eliminarán también sus subcategorías y los recursos que contenga. Esta acción no se puede deshacer.`}
+        message={`¿Eliminar “${toDelete?.name}”? Se eliminarán también sus departamentos y los recursos que contenga. Esta acción no se puede deshacer.`}
         loading={deleting}
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}

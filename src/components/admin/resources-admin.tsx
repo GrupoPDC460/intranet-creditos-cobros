@@ -131,7 +131,7 @@ export function ResourcesAdmin({
       nombre: r.name,
       url: r.url,
       categoria: catName.get(r.categoryId) ?? "",
-      subcategoria:
+      departamento:
         categories
           .find((c) => c.id === r.categoryId)
           ?.subcategories.find((s) => s.id === r.subcategoryId)?.name ?? "",
@@ -452,13 +452,13 @@ function ResourceForm({
           </select>
         </div>
         <div>
-          <label className="label">Subcategoría</label>
+          <label className="label">Departamento</label>
           <select
             className="field"
             value={form.subcategoryId ?? ""}
             onChange={(e) => set("subcategoryId", e.target.value || null)}
           >
-            <option value="">— Ninguna —</option>
+            <option value="">— Ninguno —</option>
             {subcategories.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -590,7 +590,7 @@ function ImportDialog({
   return (
     <Modal open={open} onClose={onClose} title="Importar recursos (CSV)" wide>
       <p className="mb-3 text-sm text-muted">
-        Encabezados: <code className="rounded bg-white/10 px-1">nombre, url, categoria, subcategoria, tipo, descripcion, destacado</code>.
+        Encabezados: <code className="rounded bg-white/10 px-1">nombre, url, categoria, departamento, tipo, descripcion, destacado</code>.
         Las categorías inexistentes se crean automáticamente.
       </p>
       <input
@@ -604,7 +604,7 @@ function ImportDialog({
         onChange={(e) => setText(e.target.value)}
         rows={7}
         className="field font-mono text-xs"
-        placeholder={"nombre,url,categoria,subcategoria,tipo,descripcion,destacado\nKACE,https://...,Operaciones,Sistemas,Sistema,Mesa de servicio,Sí"}
+        placeholder={"nombre,url,categoria,departamento,tipo,descripcion,destacado\nKACE,https://...,Cobros,Cobros Venta Directa,Sistema,Mesa de servicio,Sí"}
       />
       <div className="mt-6 flex justify-end gap-2">
         <button onClick={onClose} className="btn btn-ghost">
