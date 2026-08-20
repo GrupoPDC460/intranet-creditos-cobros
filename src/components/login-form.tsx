@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Loader2, ShieldCheck } from "lucide-react";
+import { Lock, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/ui";
 
 export function LoginForm({ next }: { next: string }) {
@@ -94,9 +94,18 @@ export function LoginForm({ next }: { next: string }) {
           </button>
         </form>
       </div>
-      <p className="mt-6 text-center text-xs text-muted/70">
-        La contraseña se configura en la variable de entorno del servidor.
-      </p>
+      <div className="mt-6 flex flex-col items-center gap-3">
+        <a
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-glow transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al inicio
+        </a>
+        <p className="text-center text-xs text-muted/70">
+          La contraseña se configura en la variable de entorno del servidor.
+        </p>
+      </div>
     </div>
   );
 }
