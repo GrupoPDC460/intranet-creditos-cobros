@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import {
   Plus,
@@ -50,8 +49,14 @@ export function ResourcesAdmin({
   openNew,
   openImport,
 }: Props) {
-  const router = useRouter();
   const { toast } = useToast();
+
+  // Recarga garantizada desde el servidor. router.refresh() no siempre repinta
+  // la lista en producción, así que tras agregar/editar/eliminar recargamos la
+  // ruta limpia para que el cambio se vea siempre al instante.
+  function reloadFresh() {
+    setTimeout(() => window.location.assign("/admin/recursos"), 450);
+  }
 
   const [query, setQuery] = useState("");
   const [catFilter, setCatFilter] = useState<string>("all");
@@ -61,6 +66,9 @@ export function ResourcesAdmin({
   const [importOpen, setImportOpen] = useState(Boolean(openImport));
   const [toDelete, setToDelete] = useState<Resource | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Cambios optimistas de los toggles (activo/destacado): se ven al instante en
+  // pantalla y se confirman contra la base; si la API falla, se revierten.
+  const [overrides, setOverrides] = useState<Record<string, Partial<Resource>>>({});
 
   const catName = useMemo(
     () => new Map(categories.map((c) => [c.id, c.name])),
@@ -69,7 +77,9 @@ export function ResourcesAdmin({
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return resources.filter((r) => {
+    return resources
+      .map((r) => (overrides[r.id] ? { ...r, ...overrides[r.id] } : r))
+      .filter((r) => {
       if (catFilter !== "all" && r.categoryId !== catFilter) return false;
       if (!term) return true;
       return (
@@ -78,17 +88,23 @@ export function ResourcesAdmin({
         (catName.get(r.categoryId) ?? "").toLowerCase().includes(term)
       );
     });
-  }, [resources, query, catFilter, catName]);
+  }, [resources, query, catFilter, catName, overrides]);
 
   async function patchResource(id: string, patch: Record<string, unknown>) {
+    // Optimista: refleja el cambio de inmediato en pantalla.
+    setOverrides((o) => ({ ...o, [id]: { ...o[id], ...(patch as Partial<Resource>) } }));
     const res = await fetch(`/api/resources/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    if (res.ok) {
-      router.refresh();
-    } else {
+    if (!res.ok) {
+      // Revertir el cambio optimista si el servidor lo rechaza.
+      setOverrides((o) => {
+        const next = { ...o };
+        delete next[id];
+        return next;
+      });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       toast(data.error ?? "No se pudo actualizar.", "error");
     }
@@ -102,7 +118,7 @@ export function ResourcesAdmin({
     if (res.ok) {
       toast("Recurso eliminado", "success");
       setToDelete(null);
-      router.refresh();
+      reloadFresh();
     } else {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       toast(data.error ?? "No se pudo eliminar.", "error");
@@ -286,7 +302,7 @@ export function ResourcesAdmin({
         editing={editing}
         onSaved={() => {
           setFormOpen(false);
-          router.refresh();
+          reloadFresh();
         }}
       />
 
@@ -295,7 +311,7 @@ export function ResourcesAdmin({
         onClose={() => setImportOpen(false)}
         onDone={() => {
           setImportOpen(false);
-          router.refresh();
+          reloadFresh();
         }}
       />
 

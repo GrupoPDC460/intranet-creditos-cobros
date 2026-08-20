@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import * as Icons from "lucide-react";
 import {
   Plus,
@@ -58,8 +57,13 @@ export function CategoriesAdmin({
   counts: Record<string, number>;
   writable: boolean;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
+
+  // Recarga garantizada desde el servidor tras crear/editar/eliminar, porque
+  // router.refresh() no siempre repinta la lista en producción.
+  function reloadFresh() {
+    setTimeout(() => window.location.assign("/admin/categorias"), 450);
+  }
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
@@ -126,7 +130,7 @@ export function CategoriesAdmin({
     if (res.ok) {
       toast(editing ? "Categoría actualizada" : "Categoría creada", "success");
       setFormOpen(false);
-      router.refresh();
+      reloadFresh();
     } else {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       toast(data.error ?? "No se pudo guardar.", "error");
@@ -141,7 +145,7 @@ export function CategoriesAdmin({
     if (res.ok) {
       toast("Categoría eliminada", "success");
       setToDelete(null);
-      router.refresh();
+      reloadFresh();
     } else {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       toast(data.error ?? "No se pudo eliminar.", "error");
@@ -154,7 +158,7 @@ export function CategoriesAdmin({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ order: cat.order + dir }),
     });
-    router.refresh();
+    reloadFresh();
   }
 
   function setSub(i: number, name: string) {

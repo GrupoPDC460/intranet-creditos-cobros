@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Star, ExternalLink } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
@@ -18,11 +18,14 @@ export function FeaturedAdmin({
   categories: Category[];
   writable: boolean;
 }) {
-  const router = useRouter();
   const { toast } = useToast();
   const catName = new Map(categories.map((c) => [c.id, c.name]));
+  // Cambios optimistas: el recurso salta entre listas al instante y se confirma
+  // contra la base; si la API falla, se revierte.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   async function setFeatured(id: string, featured: boolean) {
+    setOverrides((o) => ({ ...o, [id]: featured }));
     const res = await fetch(`/api/resources/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -30,15 +33,26 @@ export function FeaturedAdmin({
     });
     if (res.ok) {
       toast(featured ? "Marcado como destacado" : "Quitado de destacados", "success");
-      router.refresh();
     } else {
+      setOverrides((o) => {
+        const next = { ...o };
+        delete next[id];
+        return next;
+      });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       toast(data.error ?? "No se pudo actualizar.", "error");
     }
   }
 
-  const featured = resources.filter((r) => r.featured);
-  const rest = resources.filter((r) => !r.featured);
+  const view = useMemo(
+    () =>
+      resources.map((r) =>
+        r.id in overrides ? { ...r, featured: overrides[r.id] } : r,
+      ),
+    [resources, overrides],
+  );
+  const featured = view.filter((r) => r.featured);
+  const rest = view.filter((r) => !r.featured);
 
   return (
     <div>
