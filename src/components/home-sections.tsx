@@ -4,7 +4,7 @@ import Link from "next/link";
 import * as Icons from "lucide-react";
 import { Search, ArrowUpRight, Star, Sparkles } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { useFavorites } from "@/components/providers";
 import { useOpenSearch } from "@/components/site-shell";
 import { Reveal, SheenCard, SectionHeading, EmptyState } from "@/components/ui";
@@ -78,7 +78,7 @@ export function QuickAccess({ resources }: { resources: Resource[] }) {
       <SectionHeading eyebrow="Accesos rápidos" title="Más utilizados" />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {resources.map((r, i) => {
-          const Icon = typeIcon(r.type);
+          const Icon = resourceIcon(r);
           const tint = TYPE_TINT[r.type];
           return (
             <Reveal key={r.id} index={i}>

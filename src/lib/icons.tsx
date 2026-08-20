@@ -13,6 +13,7 @@ import {
   Boxes,
   type LucideIcon,
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import type { ResourceType } from "@/lib/types";
 
 /** Icono Lucide por defecto para cada tipo de recurso. */
@@ -49,4 +50,23 @@ export const TYPE_TINT: Record<ResourceType, string> = {
 
 export function typeIcon(type: ResourceType): LucideIcon {
   return TYPE_ICON[type] ?? Boxes;
+}
+
+/** Resuelve un nombre Lucide en kebab-case (ej. "wallet", "chart-pie") a su componente. */
+export function iconByName(name?: string | null): LucideIcon | null {
+  if (!name) return null;
+  const key = name
+    .trim()
+    .split("-")
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join("");
+  return (LucideIcons as unknown as Record<string, LucideIcon>)[key] ?? null;
+}
+
+/** Icono de un recurso: usa el manual si existe; si no, el de su tipo. */
+export function resourceIcon(resource: {
+  icon?: string | null;
+  type: ResourceType;
+}): LucideIcon {
+  return iconByName(resource.icon) ?? typeIcon(resource.type);
 }

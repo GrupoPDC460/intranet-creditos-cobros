@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, Star, Shield, X, CornerDownLeft, ArrowUpRight } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { Logo } from "@/components/ui";
 
 export interface PublicData {
@@ -148,7 +148,7 @@ export function SearchCommand({
               ) : (
                 <ul className="flex flex-col">
                   {results.map((r, i) => {
-                    const Icon = typeIcon(r.type);
+                    const Icon = resourceIcon(r);
                     const tint = TYPE_TINT[r.type];
                     return (
                       <li key={r.id}>

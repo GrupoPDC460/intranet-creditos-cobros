@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import type { Category, Resource, ResourceInput } from "@/lib/types";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
+import { IconPicker } from "@/components/admin/icon-picker";
 import { useToast } from "@/components/providers";
 import { Modal, ConfirmDialog, Toggle, ReadOnlyBanner } from "@/components/admin/ui";
 
@@ -215,7 +216,7 @@ export function ResourcesAdmin({
         ) : (
           <ul className="divide-y divide-white/[0.06]">
             {filtered.map((r) => {
-              const Icon = typeIcon(r.type);
+              const Icon = resourceIcon(r);
               const tint = TYPE_TINT[r.type];
               return (
                 <li
@@ -489,12 +490,12 @@ function ResourceForm({
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="label">Icono Lucide (opcional)</label>
-          <input
-            className="field"
+          <label className="label">Icono</label>
+          <IconPicker
             value={form.icon ?? ""}
-            onChange={(e) => set("icon", e.target.value || null)}
-            placeholder="ej. bar-chart-3 (deja vacío para usar el del tipo)"
+            onChange={(icon) => set("icon", icon || null)}
+            allowAuto
+            autoHint={`Automático: se usa el icono del tipo "${RESOURCE_TYPE_LABELS[form.type]}".`}
           />
         </div>
 

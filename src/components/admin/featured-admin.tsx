@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Star, ExternalLink } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { useToast } from "@/components/providers";
 import { Toggle, ReadOnlyBanner } from "@/components/admin/ui";
 import { EmptyState } from "@/components/ui";
@@ -127,7 +127,7 @@ function Row({
   writable: boolean;
   onToggle: (id: string, featured: boolean) => void;
 }) {
-  const Icon = typeIcon(r.type);
+  const Icon = resourceIcon(r);
   const tint = TYPE_TINT[r.type];
   return (
     <li className="flex items-center gap-3 px-4 py-3">

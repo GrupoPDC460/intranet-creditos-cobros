@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { getRepository } from "@/lib/data/repository";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { ReadOnlyBanner } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -100,7 +100,7 @@ export default async function AdminDashboard() {
           ) : (
             <ul className="divide-y divide-white/[0.06]">
               {recientes.map((r) => {
-                const Icon = typeIcon(r.type);
+                const Icon = resourceIcon(r);
                 const tint = TYPE_TINT[r.type];
                 return (
                   <li key={r.id} className="flex items-center gap-3 px-5 py-3">

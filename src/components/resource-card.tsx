@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Star } from "lucide-react";
 import type { Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
-import { typeIcon, TYPE_TINT } from "@/lib/icons";
+import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { displayHost } from "@/lib/utils";
 import { useFavorites, useToast } from "@/components/providers";
 import { SheenCard } from "@/components/ui";
@@ -66,7 +66,7 @@ export function ResourceCard({
   resource: Resource;
   index?: number;
 }) {
-  const Icon = typeIcon(resource.type);
+  const Icon = resourceIcon(resource);
   const tint = TYPE_TINT[resource.type];
   const host = displayHost(resource.url);
 
