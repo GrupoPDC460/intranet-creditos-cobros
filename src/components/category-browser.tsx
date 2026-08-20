@@ -108,21 +108,59 @@ export function CategoryBrowser({
       <div className="space-y-12 pb-4">
         {groups.map((group) => (
           <section key={group.key}>
-            <div className="mb-4 flex items-center gap-3">
+            <div className="mb-5 flex items-center gap-3">
               <h2 className="font-display text-lg font-semibold text-white">{group.name}</h2>
               <span className="chip">{group.items.length}</span>
               <span className="hairline flex-1" />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {group.items.map((r, i) => (
-                <Reveal key={r.id} index={i}>
-                  <ResourceCard resource={r} index={i} />
-                </Reveal>
-              ))}
-            </div>
+
+            {groupBy === "sub" ? (
+              <TypeBreakdown items={group.items} />
+            ) : (
+              <CardGrid items={group.items} />
+            )}
           </section>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Desglose de un conjunto de recursos por tipo, con subtítulo por cada tipo. */
+function TypeBreakdown({ items }: { items: Resource[] }) {
+  const present = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
+  if (present.length <= 1) return <CardGrid items={items} />;
+
+  return (
+    <div className="space-y-7">
+      {present.map((t) => {
+        const Icon = typeIcon(t);
+        const sub = items.filter((r) => r.type === t);
+        return (
+          <div key={t}>
+            <div className="mb-3 flex items-center gap-2">
+              <Icon className="h-4 w-4" style={{ color: TYPE_TINT[t] }} />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                {RESOURCE_TYPE_LABELS[t]}
+              </h3>
+              <span className="text-xs text-muted/70">{sub.length}</span>
+            </div>
+            <CardGrid items={sub} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CardGrid({ items }: { items: Resource[] }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((r, i) => (
+        <Reveal key={r.id} index={i}>
+          <ResourceCard resource={r} index={i} />
+        </Reveal>
+      ))}
     </div>
   );
 }
