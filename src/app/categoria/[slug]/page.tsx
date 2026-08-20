@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, PackageOpen } from "lucide-react";
 import { getPublicView } from "@/lib/data/public";
 import { SiteShell } from "@/components/site-shell";
-import { ResourceCard } from "@/components/resource-card";
+import { CategoryBrowser } from "@/components/category-browser";
 import { Reveal, EmptyState } from "@/components/ui";
 import type { Metadata } from "next";
 
@@ -30,22 +30,6 @@ export default async function CategoryPage({
 
   const resources = view.resources.filter((r) => r.categoryId === category.id);
 
-  // Agrupar por subcategoría (respetando orden), con un grupo "General" al final.
-  const groups = category.subcategories
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map((sub) => ({
-      key: sub.id,
-      name: sub.name,
-      items: resources.filter((r) => r.subcategoryId === sub.id),
-    }))
-    .filter((g) => g.items.length > 0);
-
-  const ungrouped = resources.filter(
-    (r) => !r.subcategoryId || !category.subcategories.some((s) => s.id === r.subcategoryId),
-  );
-  if (ungrouped.length) groups.push({ key: "general", name: "General", items: ungrouped });
-
   return (
     <SiteShell data={{ categories: view.categories, resources: view.resources }}>
       <div className="pt-10">
@@ -70,7 +54,7 @@ export default async function CategoryPage({
         </Reveal>
       </div>
 
-      <div className="mt-10 space-y-12 pb-4">
+      <div className="mt-10">
         {resources.length === 0 ? (
           <EmptyState
             icon={<PackageOpen className="h-5 w-5" />}
@@ -78,24 +62,7 @@ export default async function CategoryPage({
             description="El administrador puede agregar recursos desde el panel."
           />
         ) : (
-          groups.map((group) => (
-            <section key={group.key}>
-              <div className="mb-4 flex items-center gap-3">
-                <h2 className="font-display text-lg font-semibold text-white">
-                  {group.name}
-                </h2>
-                <span className="chip">{group.items.length}</span>
-                <span className="hairline flex-1" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {group.items.map((r, i) => (
-                  <Reveal key={r.id} index={i}>
-                    <ResourceCard resource={r} index={i} />
-                  </Reveal>
-                ))}
-              </div>
-            </section>
-          ))
+          <CategoryBrowser category={category} resources={resources} />
         )}
       </div>
     </SiteShell>
