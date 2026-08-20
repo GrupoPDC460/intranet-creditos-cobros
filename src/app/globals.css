@@ -64,6 +64,19 @@
 }
 
 @layer components {
+  /* Fondo de marca Grupo PDC: imagen oscurecida detrás de todo (wallpaper). */
+  .brand-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image:
+      linear-gradient(180deg, rgba(6, 10, 26, 0.62) 0%, rgba(6, 10, 26, 0.8) 100%),
+      url("/brand-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
   /* Fondo aurora: capas de gradiente que derivan suavemente detrás del vidrio. */
   .aurora {
     position: fixed;
@@ -71,10 +84,10 @@
     z-index: -1;
     overflow: hidden;
     background:
-      radial-gradient(60rem 60rem at 12% -10%, rgba(36, 86, 230, 0.28), transparent 60%),
-      radial-gradient(50rem 50rem at 100% 0%, rgba(76, 201, 240, 0.18), transparent 55%),
-      radial-gradient(45rem 45rem at 50% 120%, rgba(20, 34, 88, 0.55), transparent 60%),
-      linear-gradient(180deg, #0a1230 0%, #080e26 100%);
+      radial-gradient(60rem 60rem at 12% -10%, rgba(36, 86, 230, 0.22), transparent 60%),
+      radial-gradient(50rem 50rem at 100% 0%, rgba(76, 201, 240, 0.14), transparent 55%),
+      radial-gradient(45rem 45rem at 50% 120%, rgba(20, 34, 88, 0.4), transparent 60%),
+      linear-gradient(180deg, rgba(10, 18, 48, 0.58) 0%, rgba(8, 14, 38, 0.72) 100%);
   }
   .aurora::before,
   .aurora::after {

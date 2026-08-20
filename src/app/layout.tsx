@@ -39,6 +39,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen font-sans antialiased">
+        <div className="brand-bg" aria-hidden="true" />
         <div className="aurora" aria-hidden="true" />
         <Providers>{children}</Providers>
       </body>

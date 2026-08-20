@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { LayoutGrid, Shapes } from "lucide-react";
+import { ChevronLeft, Folder, PackageOpen } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import type { Category, Resource, ResourceType } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
 import { ResourceCard } from "@/components/resource-card";
-import { Reveal } from "@/components/ui";
+import { Reveal, EmptyState } from "@/components/ui";
 
-type TypeFilter = ResourceType | "all";
-type GroupMode = "sub" | "type";
+const GENERAL = "__general__";
 
 export function CategoryBrowser({
   category,
@@ -18,59 +17,78 @@ export function CategoryBrowser({
   category: Category;
   resources: Resource[];
 }) {
-  const [type, setType] = useState<TypeFilter>("all");
-  const [groupBy, setGroupBy] = useState<GroupMode>("sub");
+  const [openDept, setOpenDept] = useState<string | null>(null);
+  const [type, setType] = useState<ResourceType | "all">("all");
 
-  // Tipos presentes en esta categoría (en el orden canónico), con su conteo.
-  const presentTypes = useMemo(
-    () =>
-      RESOURCE_TYPES.filter((t) => resources.some((r) => r.type === t)).map((t) => ({
-        type: t,
-        count: resources.filter((r) => r.type === t).length,
-      })),
-    [resources],
-  );
-
-  const filtered = useMemo(
-    () => (type === "all" ? resources : resources.filter((r) => r.type === type)),
-    [resources, type],
-  );
-
-  const groups = useMemo(() => {
-    if (groupBy === "type") {
-      return RESOURCE_TYPES.filter((t) => filtered.some((r) => r.type === t)).map((t) => ({
-        key: t,
-        name: RESOURCE_TYPE_LABELS[t],
-        items: filtered.filter((r) => r.type === t),
-      }));
-    }
-    const subs = category.subcategories
+  const depts = useMemo(() => {
+    const list = category.subcategories
       .slice()
       .sort((a, b) => a.order - b.order)
       .map((sub) => ({
-        key: sub.id,
+        id: sub.id,
         name: sub.name,
-        items: filtered.filter((r) => r.subcategoryId === sub.id),
+        items: resources.filter((r) => r.subcategoryId === sub.id),
       }))
-      .filter((g) => g.items.length > 0);
-    const ungrouped = filtered.filter(
+      .filter((d) => d.items.length > 0);
+
+    const general = resources.filter(
       (r) => !r.subcategoryId || !category.subcategories.some((s) => s.id === r.subcategoryId),
     );
-    if (ungrouped.length) subs.push({ key: "general", name: "General", items: ungrouped });
-    return subs;
-  }, [filtered, groupBy, category.subcategories]);
+    if (general.length) list.push({ id: GENERAL, name: "General", items: general });
+    return list;
+  }, [category.subcategories, resources]);
 
-  return (
-    <div>
-      {/* Barra de vistas dinámicas */}
-      <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        {/* Filtro por tipo */}
-        <div className="-mx-1 flex flex-wrap gap-1.5 px-1">
+  const current = depts.find((d) => d.id === openDept) ?? null;
+
+  if (resources.length === 0) {
+    return (
+      <EmptyState
+        icon={<PackageOpen className="h-5 w-5" />}
+        title="Esta categoría aún no tiene recursos"
+        description="El administrador puede agregar recursos desde el panel."
+      />
+    );
+  }
+
+  // ---- Detalle: un departamento abierto, desglosado por tipo ----
+  if (current) {
+    const filtered =
+      type === "all" ? current.items : current.items.filter((r) => r.type === type);
+    const presentTypes = RESOURCE_TYPES.filter((t) => current.items.some((r) => r.type === t)).map(
+      (t) => ({ type: t, count: current.items.filter((r) => r.type === t).length }),
+    );
+
+    return (
+      <div>
+        <button
+          onClick={() => {
+            setOpenDept(null);
+            setType("all");
+          }}
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Departamentos
+        </button>
+
+        <div className="mb-6 flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+            <Folder className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-white">{current.name}</h2>
+            <p className="text-sm text-muted">
+              {current.items.length} {current.items.length === 1 ? "recurso" : "recursos"}
+            </p>
+          </div>
+        </div>
+
+        <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
           <FilterChip
             active={type === "all"}
             onClick={() => setType("all")}
             label="Todos"
-            count={resources.length}
+            count={current.items.length}
           />
           {presentTypes.map(({ type: t, count }) => {
             const Icon = typeIcon(t);
@@ -87,52 +105,87 @@ export function CategoryBrowser({
           })}
         </div>
 
-        {/* Modo de agrupación */}
-        <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-          <GroupBtn
-            active={groupBy === "sub"}
-            onClick={() => setGroupBy("sub")}
-            icon={<LayoutGrid className="h-3.5 w-3.5" />}
-            label="Por departamento"
-          />
-          <GroupBtn
-            active={groupBy === "type"}
-            onClick={() => setGroupBy("type")}
-            icon={<Shapes className="h-3.5 w-3.5" />}
-            label="Por tipo"
-          />
-        </div>
+        <TypeBreakdown items={filtered} />
       </div>
+    );
+  }
 
-      {/* Grupos */}
-      <div className="space-y-12 pb-4">
-        {groups.map((group) => (
-          <section key={group.key}>
-            <div className="mb-5 flex items-center gap-3">
-              <h2 className="font-display text-lg font-semibold text-white">{group.name}</h2>
-              <span className="chip">{group.items.length}</span>
-              <span className="hairline flex-1" />
-            </div>
-
-            {groupBy === "sub" ? (
-              <TypeBreakdown items={group.items} />
-            ) : (
-              <CardGrid items={group.items} />
-            )}
-          </section>
+  // ---- Carpetas: los departamentos de la categoría ----
+  return (
+    <div>
+      <p className="mb-5 text-sm text-muted">Elige un departamento para ver sus recursos.</p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {depts.map((d, i) => (
+          <Reveal key={d.id} index={i}>
+            <DeptFolder name={d.name} items={d.items} onClick={() => setOpenDept(d.id)} />
+          </Reveal>
         ))}
       </div>
     </div>
   );
 }
 
-/** Desglose de un conjunto de recursos por tipo, con subtítulo por cada tipo. */
+function DeptFolder({
+  name,
+  items,
+  onClick,
+}: {
+  name: string;
+  items: Resource[];
+  onClick: () => void;
+}) {
+  const present = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
+  return (
+    <button
+      onClick={onClick}
+      className="glass sheen group h-full w-full rounded-2xl p-5 text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
+    >
+      <div className="relative z-[2] flex h-full flex-col">
+        <div className="flex items-start justify-between">
+          <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+            <Folder className="h-6 w-6" />
+          </span>
+          <span className="chip">{items.length}</span>
+        </div>
+        <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-white">{name}</h3>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {present.map((t) => {
+            const Icon = typeIcon(t);
+            const n = items.filter((r) => r.type === t).length;
+            return (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.72rem] text-muted"
+              >
+                <Icon className="h-3 w-3" style={{ color: TYPE_TINT[t] }} />
+                {n} {RESOURCE_TYPE_LABELS[t]}
+              </span>
+            );
+          })}
+        </div>
+        <span className="mt-4 inline-flex items-center gap-1 text-[0.8rem] font-medium text-brand-glow opacity-0 transition-opacity group-hover:opacity-100">
+          Abrir departamento →
+        </span>
+      </div>
+    </button>
+  );
+}
+
 function TypeBreakdown({ items }: { items: Resource[] }) {
   const present = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
-  if (present.length <= 1) return <CardGrid items={items} />;
+  if (present.length === 0) {
+    return (
+      <EmptyState
+        icon={<PackageOpen className="h-5 w-5" />}
+        title="Nada con este filtro"
+        description="Prueba con otro tipo."
+      />
+    );
+  }
+  if (present.length === 1) return <CardGrid items={items} />;
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-8">
       {present.map((t) => {
         const Icon = typeIcon(t);
         const sub = items.filter((r) => r.type === t);
@@ -194,39 +247,11 @@ function FilterChip({
       {label}
       <span
         className={
-          "rounded-md px-1.5 text-xs " +
-          (active ? "bg-white/15 text-white" : "bg-white/5 text-muted")
+          "rounded-md px-1.5 text-xs " + (active ? "bg-white/15 text-white" : "bg-white/5 text-muted")
         }
       >
         {count}
       </span>
-    </button>
-  );
-}
-
-function GroupBtn({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors " +
-        (active ? "bg-brand-500/25 text-white" : "text-muted hover:text-white")
-      }
-    >
-      {icon}
-      {label}
     </button>
   );
 }
