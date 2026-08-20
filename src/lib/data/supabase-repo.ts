@@ -92,6 +92,11 @@ export class SupabaseRepository implements Repository {
   constructor(url: string, serviceKey: string) {
     this.db = createClient(url, serviceKey, {
       auth: { persistSession: false },
+      global: {
+        // Evita la caché de datos de Next.js: cada lectura va a la base en vivo.
+        // Sin esto, las páginas públicas servían una foto vieja del build.
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      },
     });
   }
 
