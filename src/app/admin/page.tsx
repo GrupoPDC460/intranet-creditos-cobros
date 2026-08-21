@@ -74,10 +74,10 @@ export default async function AdminDashboard() {
       {!repo.writable && <ReadOnlyBanner />}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={<Link2 className="h-5 w-5" />} label="Recursos totales" value={resources.length} tint="#4CC9F0" />
+        <StatCard icon={<Link2 className="h-5 w-5" />} label="Recursos totales" value={resources.length} tint="#7DBFE6" />
         <StatCard icon={<CircleCheck className="h-5 w-5" />} label="Recursos activos" value={activos} tint="#21A366" />
         <StatCard icon={<FolderTree className="h-5 w-5" />} label="Categorías" value={categories.length} tint="#8B9DF5" />
-        <StatCard icon={<Star className="h-5 w-5" />} label="Destacados" value={destacados} tint="#F5A623" />
+        <StatCard icon={<Star className="h-5 w-5" />} label="Destacados" value={destacados} tint="#F3B24E" />
       </div>
 
       <div className="mt-8">
@@ -117,7 +117,7 @@ export default async function AdminDashboard() {
                       </p>
                     </div>
                     {r.featured && (
-                      <Star className="h-4 w-4 shrink-0" style={{ color: "#F5A623", fill: "#F5A623" }} />
+                      <Star className="h-4 w-4 shrink-0" style={{ color: "#F3B24E", fill: "#F3B24E" }} />
                     )}
                     {!r.active && <span className="chip">Inactivo</span>}
                   </li>

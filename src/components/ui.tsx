@@ -13,8 +13,8 @@ export function Logo({ className }: { className?: string }) {
         <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden="true">
           <defs>
             <linearGradient id="pdc-mark" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#4CC9F0" />
-              <stop offset="1" stopColor="#2456E6" />
+              <stop offset="0" stopColor="#7DBFE6" />
+              <stop offset="1" stopColor="#00216F" />
             </linearGradient>
           </defs>
           <rect
@@ -38,7 +38,7 @@ export function Logo({ className }: { className?: string }) {
             opacity="0.7"
           />
           {/* monograma: tres barras ascendentes = flujo de cartera */}
-          <rect x="11" y="22" width="4.5" height="8" rx="2.25" fill="#4CC9F0" />
+          <rect x="11" y="22" width="4.5" height="8" rx="2.25" fill="#FF5100" />
           <rect x="17.75" y="16" width="4.5" height="14" rx="2.25" fill="#7CB8FF" />
           <rect x="24.5" y="10" width="4.5" height="20" rx="2.25" fill="#EAF0FF" />
         </svg>

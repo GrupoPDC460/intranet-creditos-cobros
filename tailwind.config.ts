@@ -9,26 +9,26 @@ const config: Config = {
     extend: {
       colors: {
         ink: {
-          DEFAULT: "#0A1230",
-          900: "#080E26",
-          800: "#0A1230",
-          700: "#0E1A44",
-          600: "#132258",
+          DEFAULT: "#041338",
+          900: "#030A22",
+          800: "#041338",
+          700: "#00216F",
+          600: "#0A2C7A",
         },
         brand: {
-          DEFAULT: "#2456E6",
-          50: "#EAF0FF",
-          400: "#5B84F0",
-          500: "#2456E6",
-          600: "#1D45BD",
-          glow: "#4CC9F0",
+          DEFAULT: "#FF5100",
+          50: "#FFF0E8",
+          400: "#FF7A3C",
+          500: "#FF5100",
+          600: "#D94400",
+          glow: "#7DBFE6",
         },
         gold: {
-          DEFAULT: "#F5A623",
+          DEFAULT: "#F3B24E",
           soft: "#FFCB6B",
         },
         line: "rgba(148,163,214,0.14)",
-        muted: "#9AA6C7",
+        muted: "#9FB0CF",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
@@ -42,7 +42,7 @@ const config: Config = {
       boxShadow: {
         glass: "0 1px 0 0 rgba(255,255,255,0.06) inset, 0 8px 30px -12px rgba(3,7,25,0.7)",
         "glass-lg": "0 1px 0 0 rgba(255,255,255,0.08) inset, 0 24px 60px -20px rgba(3,7,25,0.85)",
-        glow: "0 0 0 1px rgba(76,201,240,0.25), 0 8px 40px -8px rgba(36,86,230,0.45)",
+        glow: "0 0 0 1px rgba(125,191,230,0.25), 0 8px 40px -8px rgba(255,81,0,0.4)",
       },
       keyframes: {
         "fade-up": {

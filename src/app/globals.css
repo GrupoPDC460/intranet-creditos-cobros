@@ -3,15 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Manrope", system-ui, sans-serif;
-  --ink: #0a1230;
-  --ink-2: #0e1a44;
-  --brand: #2456e6;
-  --brand-glow: #4cc9f0;
-  --gold: #f5a623;
-  --text: #eaf0ff;
-  --muted: #9aa6c7;
+  --font-display: "Nunito", system-ui, sans-serif;
+  --font-body: "Nunito Sans", system-ui, sans-serif;
+  /* Paleta oficial Grupo PDC */
+  --ink: #041338;        /* navy profundo derivado del azul primario */
+  --ink-2: #00216f;      /* azul primario oficial (Pantone 2747 C) */
+  --brand: #ff5100;      /* naranja de la sonrisa (Orange 021 C) — acento principal */
+  --brand-glow: #7dbfe6; /* celeste secundario (637 C) */
+  --gold: #f3b24e;       /* dorado secundario (1365 C) — favoritos/destacados */
+  --text: #eef3ff;
+  --muted: #9fb0cf;
   --line: rgba(148, 163, 214, 0.14);
 }
 
@@ -33,7 +34,7 @@
   }
 
   ::selection {
-    background: rgba(76, 201, 240, 0.28);
+    background: rgba(125, 191, 230, 0.3);
     color: #fff;
   }
 
@@ -70,7 +71,7 @@
     inset: 0;
     z-index: -2;
     background-image:
-      linear-gradient(180deg, rgba(6, 10, 26, 0.62) 0%, rgba(6, 10, 26, 0.8) 100%),
+      linear-gradient(180deg, rgba(3, 10, 34, 0.6) 0%, rgba(3, 10, 34, 0.8) 100%),
       url("/brand-bg.jpg");
     background-size: cover;
     background-position: center;
@@ -84,10 +85,10 @@
     z-index: -1;
     overflow: hidden;
     background:
-      radial-gradient(60rem 60rem at 12% -10%, rgba(36, 86, 230, 0.22), transparent 60%),
-      radial-gradient(50rem 50rem at 100% 0%, rgba(76, 201, 240, 0.14), transparent 55%),
-      radial-gradient(45rem 45rem at 50% 120%, rgba(20, 34, 88, 0.4), transparent 60%),
-      linear-gradient(180deg, rgba(10, 18, 48, 0.58) 0%, rgba(8, 14, 38, 0.72) 100%);
+      radial-gradient(60rem 60rem at 12% -10%, rgba(0, 33, 111, 0.34), transparent 60%),
+      radial-gradient(52rem 52rem at 100% 0%, rgba(255, 81, 0, 0.12), transparent 55%),
+      radial-gradient(45rem 45rem at 50% 120%, rgba(0, 33, 111, 0.4), transparent 60%),
+      linear-gradient(180deg, rgba(4, 16, 52, 0.58) 0%, rgba(3, 11, 38, 0.72) 100%);
   }
   .aurora::before,
   .aurora::after {
@@ -103,7 +104,7 @@
     height: 40rem;
     top: -10rem;
     left: -8rem;
-    background: radial-gradient(circle, rgba(36, 86, 230, 0.5), transparent 65%);
+    background: radial-gradient(circle, rgba(0, 33, 111, 0.55), transparent 65%);
     animation: drift 24s ease-in-out infinite;
   }
   .aurora::after {
@@ -111,7 +112,7 @@
     height: 34rem;
     bottom: -12rem;
     right: -6rem;
-    background: radial-gradient(circle, rgba(76, 201, 240, 0.4), transparent 65%);
+    background: radial-gradient(circle, rgba(255, 81, 0, 0.26), transparent 65%);
     animation: drift 30s ease-in-out infinite reverse;
   }
 
@@ -198,12 +199,12 @@
   }
   .btn-primary {
     color: #fff;
-    background: linear-gradient(180deg, #2f63f0, #1d45bd);
-    box-shadow: 0 8px 24px -10px rgba(36, 86, 230, 0.8),
+    background: linear-gradient(180deg, #ff6a24, #e24700);
+    box-shadow: 0 8px 24px -10px rgba(255, 81, 0, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   .btn-primary:hover {
-    box-shadow: 0 10px 30px -8px rgba(36, 86, 230, 0.9),
+    box-shadow: 0 10px 30px -8px rgba(255, 81, 0, 0.6),
       inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
   .btn-ghost {
@@ -238,8 +239,8 @@
   }
   .field:focus {
     outline: none;
-    border-color: rgba(76, 201, 240, 0.55);
-    box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.15);
+    border-color: rgba(125, 191, 230, 0.55);
+    box-shadow: 0 0 0 3px rgba(125, 191, 230, 0.15);
   }
 
   .label {

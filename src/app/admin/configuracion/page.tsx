@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
             className="grid h-11 w-11 place-items-center rounded-xl border border-white/10"
             style={{
               background: repo.writable ? "rgba(33,163,102,0.15)" : "rgba(245,166,35,0.15)",
-              color: repo.writable ? "#21A366" : "#F5A623",
+              color: repo.writable ? "#21A366" : "#F3B24E",
             }}
           >
             {repo.writable ? (
