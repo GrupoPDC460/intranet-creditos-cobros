@@ -148,7 +148,10 @@ export function CategoryGrid({
                 )}
                 <div className="relative z-[2] mt-4 flex items-center gap-3 text-xs text-muted">
                   <span className="chip">{counts[c.id] ?? 0} recursos</span>
-                  <span>{c.subcategories.length} subcategorías</span>
+                  <span>
+                    {c.subcategories.length}{" "}
+                    {c.subcategories.length === 1 ? "departamento" : "departamentos"}
+                  </span>
                 </div>
               </SheenCard>
             </Link>
