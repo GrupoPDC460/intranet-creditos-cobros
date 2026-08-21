@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 // Wallpapers de marca Grupo PDC. Rotan con transición suave cada 5 minutos.
 const IMAGES = ["/brand-bg.jpg", "/brand-bg-1.jpg", "/brand-bg-2.jpg", "/brand-bg-3.jpg"];
-const INTERVAL_MS = 5 * 60 * 1000;
+const INTERVAL_MS = 2 * 60 * 1000;
 
 export function BrandBackground() {
   const [idx, setIdx] = useState(0);
