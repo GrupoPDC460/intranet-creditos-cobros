@@ -205,24 +205,41 @@ export class SupabaseRepository implements Repository {
       if (error) throw error;
     }
 
-    // Reemplazo completo de subcategorías cuando se envían.
+    // Sincronización de departamentos (subcategorías) SIN desvincular recursos:
+    // se actualizan/crean los que llegan y se borran solo los que el usuario quitó.
     if (patch.subcategories !== undefined) {
-      const { error: delErr } = await this.db
-        .from("subcategories")
-        .delete()
-        .eq("category_id", id);
-      if (delErr) throw delErr;
-
-      const subs = patch.subcategories.map((s, i) => ({
+      const incoming = patch.subcategories.map((s, i) => ({
         id: s.id ?? uid("sub"),
         category_id: id,
         name: s.name,
         slug: s.slug,
         order: s.order ?? i + 1,
       }));
-      if (subs.length) {
-        const { error: insErr } = await this.db.from("subcategories").insert(subs);
-        if (insErr) throw insErr;
+      const incomingIds = incoming.map((s) => s.id);
+
+      // 1) Borrar únicamente los departamentos que ya no están en la lista.
+      const { data: existing, error: exErr } = await this.db
+        .from("subcategories")
+        .select("id")
+        .eq("category_id", id);
+      if (exErr) throw exErr;
+      const toDelete = ((existing as { id: string }[]) ?? [])
+        .map((r) => r.id)
+        .filter((eid) => !incomingIds.includes(eid));
+      if (toDelete.length) {
+        const { error: delErr } = await this.db
+          .from("subcategories")
+          .delete()
+          .in("id", toDelete);
+        if (delErr) throw delErr;
+      }
+
+      // 2) Crear los nuevos y actualizar nombre/orden de los existentes (upsert por id).
+      if (incoming.length) {
+        const { error: upErr } = await this.db
+          .from("subcategories")
+          .upsert(incoming, { onConflict: "id" });
+        if (upErr) throw upErr;
       }
     }
     return this.getCategory(id);
