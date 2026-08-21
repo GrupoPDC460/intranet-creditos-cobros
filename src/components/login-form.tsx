@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
-import { Logo } from "@/components/ui";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -37,18 +36,32 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <div className="mb-8 flex justify-center">
-        <Logo />
+      {/* Lockup de marca Grupo PDC */}
+      <div className="mb-9 flex animate-fade-up flex-col items-center">
+        <span className="font-display text-[0.72rem] font-bold uppercase tracking-[0.4em] text-white/70">
+          Grupo
+        </span>
+        <span className="font-display text-6xl font-black lowercase leading-none tracking-tight text-white">
+          pdc
+        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/pdc-smile.png"
+          alt="Grupo PDC"
+          className="mt-1.5 h-auto w-[7.5rem] animate-floaty"
+        />
+        <p className="mt-5 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-brand-glow">
+          Créditos &amp; Cobros
+        </p>
       </div>
-      <div className="glass-strong rounded-2xl p-7 shadow-glass-lg">
+
+      <div className="animate-fade-up glass-strong rounded-2xl p-7 shadow-glass-lg">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
             <ShieldCheck className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="font-display text-lg font-semibold text-white">
-              Panel administrativo
-            </h1>
+            <h1 className="font-display text-lg font-semibold text-white">Panel administrativo</h1>
             <p className="text-xs text-muted">Acceso restringido</p>
           </div>
         </div>
@@ -94,6 +107,7 @@ export function LoginForm({ next }: { next: string }) {
           </button>
         </form>
       </div>
+
       <div className="mt-6 flex flex-col items-center gap-3">
         <a
           href="/"
