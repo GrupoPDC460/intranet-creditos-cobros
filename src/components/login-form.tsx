@@ -36,6 +36,21 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+      {/* Fondo en video de marca (solo en el login) */}
+      <div className="login-video" aria-hidden="true">
+        <video
+          className="login-video__el"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/login-bg.jpg"
+        >
+          <source src="/login-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="login-video__overlay" />
+      </div>
+
       {/* Lockup de marca Grupo PDC */}
       <div className="mb-9 flex animate-fade-up flex-col items-center">
         <span className="font-display text-[0.72rem] font-bold uppercase tracking-[0.4em] text-white/70">

@@ -329,3 +329,23 @@
 .animate-floaty {
   animation: floaty 6s ease-in-out infinite;
 }
+
+/* Fondo en video del login (marca Grupo PDC). */
+.login-video {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+.login-video__el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.login-video__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(3, 10, 34, 0.72) 0%, rgba(3, 10, 34, 0.82) 100%);
+}
