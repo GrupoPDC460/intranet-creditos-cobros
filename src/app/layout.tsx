@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { BrandBackground } from "@/components/brand-background";
 
 export const metadata: Metadata = {
   title: {
@@ -39,7 +40,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen font-sans antialiased">
-        <div className="brand-bg" aria-hidden="true" />
+        <BrandBackground />
         <div className="aurora" aria-hidden="true" />
         <Providers>{children}</Providers>
       </body>
