@@ -21,6 +21,7 @@ export function CategoryBrowser({
   const [type, setType] = useState<ResourceType | "all">("all");
 
   const depts = useMemo(() => {
+    // Mostrar TODOS los departamentos, aunque estén vacíos (visibilidad de estructura).
     const list = category.subcategories
       .slice()
       .sort((a, b) => a.order - b.order)
@@ -28,8 +29,7 @@ export function CategoryBrowser({
         id: sub.id,
         name: sub.name,
         items: resources.filter((r) => r.subcategoryId === sub.id),
-      }))
-      .filter((d) => d.items.length > 0);
+      }));
 
     const general = resources.filter(
       (r) => !r.subcategoryId || !category.subcategories.some((s) => s.id === r.subcategoryId),
@@ -57,6 +57,7 @@ export function CategoryBrowser({
     const presentTypes = RESOURCE_TYPES.filter((t) => current.items.some((r) => r.type === t)).map(
       (t) => ({ type: t, count: current.items.filter((r) => r.type === t).length }),
     );
+    const empty = current.items.length === 0;
 
     return (
       <div>
@@ -83,29 +84,39 @@ export function CategoryBrowser({
           </div>
         </div>
 
-        <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
-          <FilterChip
-            active={type === "all"}
-            onClick={() => setType("all")}
-            label="Todos"
-            count={current.items.length}
+        {empty ? (
+          <EmptyState
+            icon={<PackageOpen className="h-5 w-5" />}
+            title="Este departamento aún no tiene recursos"
+            description="Agrega recursos a este departamento desde el panel de administración."
           />
-          {presentTypes.map(({ type: t, count }) => {
-            const Icon = typeIcon(t);
-            return (
+        ) : (
+          <>
+            <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
               <FilterChip
-                key={t}
-                active={type === t}
-                onClick={() => setType(t)}
-                label={RESOURCE_TYPE_LABELS[t]}
-                count={count}
-                icon={<Icon className="h-3.5 w-3.5" style={{ color: TYPE_TINT[t] }} />}
+                active={type === "all"}
+                onClick={() => setType("all")}
+                label="Todos"
+                count={current.items.length}
               />
-            );
-          })}
-        </div>
+              {presentTypes.map(({ type: t, count }) => {
+                const Icon = typeIcon(t);
+                return (
+                  <FilterChip
+                    key={t}
+                    active={type === t}
+                    onClick={() => setType(t)}
+                    label={RESOURCE_TYPE_LABELS[t]}
+                    count={count}
+                    icon={<Icon className="h-3.5 w-3.5" style={{ color: TYPE_TINT[t] }} />}
+                  />
+                );
+              })}
+            </div>
 
-        <TypeBreakdown items={filtered} />
+            <TypeBreakdown items={filtered} />
+          </>
+        )}
       </div>
     );
   }
@@ -149,19 +160,23 @@ function DeptFolder({
         </div>
         <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-white">{name}</h3>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {present.map((t) => {
-            const Icon = typeIcon(t);
-            const n = items.filter((r) => r.type === t).length;
-            return (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.72rem] text-muted"
-              >
-                <Icon className="h-3 w-3" style={{ color: TYPE_TINT[t] }} />
-                {n} {RESOURCE_TYPE_LABELS[t]}
-              </span>
-            );
-          })}
+          {present.length === 0 ? (
+            <span className="text-[0.78rem] text-muted/70">Sin recursos aún</span>
+          ) : (
+            present.map((t) => {
+              const Icon = typeIcon(t);
+              const n = items.filter((r) => r.type === t).length;
+              return (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.72rem] text-muted"
+                >
+                  <Icon className="h-3 w-3" style={{ color: TYPE_TINT[t] }} />
+                  {n} {RESOURCE_TYPE_LABELS[t]}
+                </span>
+              );
+            })
+          )}
         </div>
         <span className="mt-4 inline-flex items-center gap-1 text-[0.8rem] font-medium text-brand-glow opacity-0 transition-opacity group-hover:opacity-100">
           Abrir departamento →
