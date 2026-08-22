@@ -330,22 +330,211 @@
   animation: floaty 6s ease-in-out infinite;
 }
 
-/* Fondo en video del login (marca Grupo PDC). */
-.login-video {
+
+/* ============================================================
+   LOGIN NEUMÓRFICO "Luxury" (Sign In / Sign Up slider) · PDC
+   ============================================================ */
+.neu-page {
+  --neu-bg: #f4f1ea;
+  --neu-dark: #ddd9ce;
+  --neu-light: #ffffff;
+  --neu-text: #2c2a29;
+  --neu-muted: #8a857f;
+  --neu-navy: #00216f;
+  --neu-gold: #c5a880;
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--neu-bg);
+  font-family: "Montserrat", system-ui, sans-serif;
+  color: var(--neu-text);
+}
+
+.neu-main {
+  position: relative;
+  width: min(860px, 100%);
+  min-height: 560px;
+  background: var(--neu-bg);
+  border-radius: 30px;
   overflow: hidden;
+  box-shadow: 16px 16px 32px var(--neu-dark), -16px -16px 32px var(--neu-light);
 }
-.login-video__el {
+
+.neu-container {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
   height: 100%;
-  object-fit: cover;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.7s ease-in-out, opacity 0.7s ease-in-out;
 }
-.login-video__overlay {
+.neu-b { left: 0; z-index: 2; opacity: 1; }
+.neu-a { left: 0; z-index: 1; opacity: 0; }
+.neu-main.is-signup .neu-b { transform: translateX(100%); opacity: 0; z-index: 1; }
+.neu-main.is-signup .neu-a { transform: translateX(100%); opacity: 1; z-index: 3; }
+
+.neu-form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 28px;
+}
+.neu-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--neu-navy);
+}
+.neu-lead {
+  margin: 10px 0 22px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--neu-muted);
+}
+.neu-field {
+  position: relative;
+  width: 100%;
+  margin-bottom: 14px;
+}
+.neu-ic {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--neu-muted);
+}
+.neu-input {
+  width: 100%;
+  padding: 13px 14px 13px 40px;
+  border: none;
+  outline: none;
+  border-radius: 14px;
+  background: var(--neu-bg);
+  color: var(--neu-text);
+  font-size: 0.9rem;
+  box-shadow: inset 5px 5px 10px var(--neu-dark), inset -5px -5px 10px var(--neu-light);
+}
+.neu-input::placeholder { color: var(--neu-muted); }
+.neu-input:focus {
+  box-shadow: inset 6px 6px 12px var(--neu-dark), inset -6px -6px 12px var(--neu-light),
+    0 0 0 2px rgba(0, 33, 111, 0.25);
+}
+.neu-input:disabled { opacity: 0.55; }
+
+.neu-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 34px;
+  border: none;
+  border-radius: 999px;
+  background: var(--neu-bg);
+  color: var(--neu-navy);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 6px 6px 12px var(--neu-dark), -6px -6px 12px var(--neu-light);
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+.neu-btn:hover { box-shadow: 4px 4px 8px var(--neu-dark), -4px -4px 8px var(--neu-light); }
+.neu-btn:active { box-shadow: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light); transform: translateY(1px); }
+.neu-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.neu-btn--solid {
+  background: linear-gradient(160deg, #0a3a9e, var(--neu-navy));
+  color: #fff;
+  width: 100%;
+  box-shadow: 6px 6px 14px var(--neu-dark);
+}
+.neu-btn--solid:hover { box-shadow: 4px 4px 10px var(--neu-dark); }
+.neu-btn--ghost {
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+}
+.neu-btn--ghost:hover { background: rgba(255, 255, 255, 0.12); box-shadow: none; }
+
+.neu-link {
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: var(--neu-muted);
+  text-decoration: none;
+}
+.neu-link:hover { color: var(--neu-navy); }
+.neu-error {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(206, 57, 44, 0.1);
+  color: #a12a20;
+  font-size: 0.8rem;
+}
+
+/* ---- Overlay deslizante ---- */
+.neu-switch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 100;
+  transition: transform 0.7s ease-in-out;
+}
+.neu-main.is-signup .neu-switch { transform: translateX(-100%); }
+.neu-switch__panel {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(3, 10, 34, 0.72) 0%, rgba(3, 10, 34, 0.82) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 38px;
+  color: #fff;
+  background: radial-gradient(120% 120% at 30% 10%, #123a86 0%, var(--neu-navy) 55%, #001444 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+.neu-switch__panel.is-b { opacity: 1; pointer-events: auto; }
+.neu-main.is-signup .neu-switch__panel.is-b { opacity: 0; pointer-events: none; }
+.neu-main.is-signup .neu-switch__panel.is-a { opacity: 1; pointer-events: auto; }
+.neu-switch__circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+.neu-switch__circle { width: 220px; height: 220px; top: -60px; right: -60px; }
+.neu-switch__circle--t { width: 160px; height: 160px; bottom: -50px; left: -40px; background: rgba(197, 168, 128, 0.14); }
+.neu-switch__title { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+.neu-switch__text { font-size: 0.85rem; line-height: 1.55; color: rgba(255, 255, 255, 0.85); margin-bottom: 24px; max-width: 280px; }
+
+/* ---- Lockup de marca PDC en el panel ---- */
+.neu-brand { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
+.neu-brand__grupo { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.4em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
+.neu-brand__pdc { font-size: 3rem; font-weight: 900; line-height: 0.9; letter-spacing: -0.02em; color: #fff; }
+.neu-brand__smile { width: 84px; height: auto; margin-top: 4px; }
+
+/* ---- Responsive: en móvil, solo iniciar sesión ---- */
+@media (max-width: 640px) {
+  .neu-main { min-height: unset; padding: 36px 0; }
+  .neu-switch, .neu-a { display: none; }
+  .neu-b { position: static; width: 100%; transform: none !important; opacity: 1 !important; }
 }

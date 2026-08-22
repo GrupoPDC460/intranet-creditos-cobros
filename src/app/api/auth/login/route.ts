@@ -10,9 +10,11 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   let password = "";
+  let username = "";
   try {
-    const body = (await req.json()) as { password?: string };
+    const body = (await req.json()) as { password?: string; username?: string };
     password = typeof body.password === "string" ? body.password : "";
+    username = typeof body.username === "string" ? body.username.trim() : "";
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
@@ -24,8 +26,14 @@ export async function POST(req: Request) {
     );
   }
 
+  // Si se define ADMIN_USER, el usuario también debe coincidir (sin distinguir may/min).
+  const expectedUser = process.env.ADMIN_USER;
+  if (expectedUser && username.toLowerCase() !== expectedUser.trim().toLowerCase()) {
+    return NextResponse.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
+  }
+
   if (!checkPassword(password)) {
-    return NextResponse.json({ error: "Contraseña incorrecta." }, { status: 401 });
+    return NextResponse.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
   }
 
   const token = await createSessionToken();
