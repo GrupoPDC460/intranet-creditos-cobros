@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Lock } from "lucide-react";
 
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
+  const router = useRouter();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -32,6 +34,11 @@ export function ChangePasswordForm() {
       if (res.ok) {
         setMsg({ type: "ok", text: "Contraseña actualizada correctamente." });
         setCurrent(""); setNext(""); setConfirm("");
+        if (forced) {
+          setTimeout(() => { window.location.assign("/"); }, 800);
+        } else {
+          router.refresh();
+        }
       } else {
         setMsg({ type: "err", text: data.error ?? "No se pudo cambiar." });
       }

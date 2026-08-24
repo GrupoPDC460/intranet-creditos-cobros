@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  let session: { sub: string; role: string } | null = null;
+  let session: { sub: string; role: string; mc?: boolean } | null = null;
 
   // 1) Administrador maestro por variable de entorno (evita bloqueos).
   const expectedUser = process.env.ADMIN_USER;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     try {
       const user = await getUserByLogin(login);
       if (user && user.password_hash && verifyPassword(password, user.password_hash)) {
-        session = { sub: user.username, role: user.role };
+        session = { sub: user.username, role: user.role, mc: user.must_change_password };
       }
     } catch {
       // Si falla la consulta, se trata como credenciales inválidas.
@@ -50,8 +50,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = await createSessionToken(session.sub, session.role);
-  const res = NextResponse.json({ ok: true, role: session.role });
+  const token = await createSessionToken(session.sub, session.role, session.mc);
+  const res = NextResponse.json({ ok: true, role: session.role, mustChange: !!session.mc });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

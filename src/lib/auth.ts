@@ -57,16 +57,18 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export type SessionPayload = { sub: string; role: string; exp: number };
+export type SessionPayload = { sub: string; role: string; exp: number; mc?: boolean };
 
 export async function createSessionToken(
   sub = "admin",
   role = "admin",
+  mc = false,
 ): Promise<string> {
   const payload: SessionPayload = {
     sub,
     role,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    ...(mc ? { mc: true } : {}),
   };
   const body = base64url(new TextEncoder().encode(JSON.stringify(payload)));
   const sig = await hmac(body);

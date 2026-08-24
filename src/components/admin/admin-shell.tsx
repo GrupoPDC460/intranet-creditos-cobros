@@ -27,7 +27,13 @@ const NAV = [
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  pendingCount = 0,
+}: {
+  children: React.ReactNode;
+  pendingCount?: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,7 +65,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             )}
           >
             <Icon className="h-4 w-4" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.href === "/admin/solicitudes" && pendingCount > 0 && (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand-500 px-1.5 text-[0.7rem] font-bold text-white">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
           </Link>
         );
       })}

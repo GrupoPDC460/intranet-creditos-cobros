@@ -13,6 +13,7 @@ export interface AppUser {
   status: string;
   active: boolean;
   reset_requested: boolean;
+  must_change_password: boolean;
   created_at: string;
   decided_at: string | null;
 }
@@ -164,6 +165,7 @@ export async function resetPassword(
       status: "active",
       active: true,
       reset_requested: false,
+      must_change_password: true,
       decided_at: new Date().toISOString(),
     })
     .eq("id", id);
@@ -194,7 +196,7 @@ export async function changeOwnPassword(
   }
   const { error } = await db
     .from("app_users")
-    .update({ password_hash: hashPassword(newPw) })
+    .update({ password_hash: hashPassword(newPw), must_change_password: false })
     .eq("id", user.id);
   if (error) return { ok: false, error: "No se pudo actualizar." };
   return { ok: true };
@@ -208,4 +210,19 @@ export async function requestReset(email: string): Promise<void> {
     .update({ reset_requested: true })
     .eq("email", email.trim().toLowerCase())
     .eq("active", true);
+}
+
+/** Cuenta de pendientes para el administrador: solicitudes + restablecimientos. */
+export async function countPending(): Promise<number> {
+  const db = admin();
+  const pend = await db
+    .from("app_users")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  const resets = await db
+    .from("app_users")
+    .select("id", { count: "exact", head: true })
+    .eq("active", true)
+    .eq("reset_requested", true);
+  return (pend.count || 0) + (resets.count || 0);
 }

@@ -14,6 +14,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Contraseña temporal: obligar a cambiarla antes de usar el portal.
+  if (session.mc && !req.nextUrl.pathname.startsWith("/cuenta")) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/cuenta";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   // El panel de administración exige rol admin.
   if (req.nextUrl.pathname.startsWith("/admin") && session.role !== "admin") {
     const url = req.nextUrl.clone();
