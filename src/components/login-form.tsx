@@ -27,6 +27,23 @@ export function LoginForm({ next }: { next: string }) {
   const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+
+  async function forgot(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await fetch("/api/auth/forgot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+    } catch {
+      /* respuesta uniforme */
+    }
+    setForgotSent(true);
+  }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -189,6 +206,43 @@ export function LoginForm({ next }: { next: string }) {
             <a href="/" className="neu-link">
               Volver al inicio
             </a>
+            <button
+              type="button"
+              className="neu-link"
+              onClick={() => {
+                setForgotOpen((v) => !v);
+                setForgotSent(false);
+              }}
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+
+            {forgotOpen && !forgotSent && (
+              <div className="neu-forgot">
+                <p className="neu-forgot__lead">
+                  Ingresa tu correo @grupopdc.com y el administrador procesará tu restablecimiento.
+                </p>
+                <div className="neu-field">
+                  <Mail className="neu-ic" />
+                  <input
+                    className="neu-input"
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="tu.correo@grupopdc.com"
+                  />
+                </div>
+                <button type="button" className="neu-btn" onClick={forgot} disabled={!forgotEmail}>
+                  Enviar solicitud
+                </button>
+              </div>
+            )}
+            {forgotSent && (
+              <p className="neu-forgot__ok">
+                Si tu cuenta existe, el administrador procesará tu restablecimiento y te dará una
+                contraseña nueva.
+              </p>
+            )}
           </form>
         </div>
 

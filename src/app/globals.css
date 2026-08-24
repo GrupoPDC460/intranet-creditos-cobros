@@ -562,3 +562,21 @@
   .neu-switch, .neu-a { display: none; }
   .neu-b { position: static; width: 100%; transform: none !important; opacity: 1 !important; }
 }
+
+/* Olvidé mi contraseña (login) */
+.neu-forgot {
+  width: 100%;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.neu-forgot__lead { font-size: 0.76rem; color: var(--neu-muted); margin-bottom: 10px; }
+.neu-forgot__ok {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--neu-navy);
+  background: rgba(0, 33, 111, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Copy, UserPlus, Mail, ShieldCheck, Loader2 } from "lucide-react";
+import { Check, X, Copy, UserPlus, Mail, ShieldCheck, Loader2, KeyRound, Trash2 } from "lucide-react";
 import { useToast } from "@/components/providers";
 import { Modal } from "@/components/admin/ui";
 
@@ -18,6 +18,7 @@ interface Active {
   username: string;
   fullName: string | null;
   role: string;
+  resetRequested: boolean;
 }
 
 export function SolicitudesAdmin({
@@ -77,6 +78,50 @@ export function SolicitudesAdmin({
         reload();
       } else {
         toast("No se pudo rechazar.", "error");
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reset(id: string) {
+    setBusy(id);
+    try {
+      const res = await fetch("/api/users/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        username?: string;
+        password?: string;
+        email?: string;
+        error?: string;
+      };
+      if (res.ok && data.username && data.password) {
+        setCreds({ username: data.username, password: data.password, email: data.email || "" });
+      } else {
+        toast(data.error ?? "No se pudo restablecer.", "error");
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function remove(id: string, label: string) {
+    if (!window.confirm(`¿Eliminar la cuenta de ${label}? Esta acción no se puede deshacer.`)) return;
+    setBusy(id);
+    try {
+      const res = await fetch("/api/users/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        toast("Cuenta eliminada", "success");
+        reload();
+      } else {
+        toast("No se pudo eliminar.", "error");
       }
     } finally {
       setBusy(null);
@@ -173,7 +218,7 @@ export function SolicitudesAdmin({
         ) : (
           <ul className="space-y-2">
             {active.map((u) => (
-              <li key={u.id} className="glass flex items-center gap-3 rounded-xl px-4 py-3">
+              <li key={u.id} className="glass flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 sm:flex-nowrap">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-brand-glow">
                   <ShieldCheck className="h-5 w-5" />
                 </span>
@@ -181,10 +226,34 @@ export function SolicitudesAdmin({
                   <p className="truncate font-medium text-white">
                     {u.fullName || u.username}{" "}
                     {u.role === "admin" && <span className="chip ml-1">admin</span>}
+                    {u.resetRequested && (
+                      <span className="ml-1 rounded-md bg-gold/20 px-1.5 py-0.5 text-[0.7rem] font-semibold text-gold">
+                        pidió restablecer
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-sm text-muted">
                     {u.email} · {u.username}
                   </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => reset(u.id)}
+                    disabled={busy === u.id}
+                    className="btn btn-ghost"
+                    title="Generar una contraseña nueva"
+                  >
+                    {busy === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                    Restablecer
+                  </button>
+                  <button
+                    onClick={() => remove(u.id, u.fullName || u.username)}
+                    disabled={busy === u.id}
+                    className="btn btn-danger"
+                    title="Eliminar cuenta"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </li>
             ))}

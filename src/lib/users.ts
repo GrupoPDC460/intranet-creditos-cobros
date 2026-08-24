@@ -12,6 +12,7 @@ export interface AppUser {
   role: string;
   status: string;
   active: boolean;
+  reset_requested: boolean;
   created_at: string;
   decided_at: string | null;
 }
@@ -138,4 +139,73 @@ export async function rejectRequest(id: string): Promise<void> {
     .update({ status: "rejected", active: false, decided_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Elimina un usuario/solicitud por id. */
+export async function deleteUser(id: string): Promise<void> {
+  const db = admin();
+  const { error } = await db.from("app_users").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Restablece la contraseña: genera una nueva, la guarda y la devuelve. */
+export async function resetPassword(
+  id: string,
+): Promise<{ username: string; password: string; email: string } | null> {
+  const db = admin();
+  const { data: rows } = await db.from("app_users").select("*").eq("id", id).limit(1);
+  const user = rows && (rows[0] as AppUser);
+  if (!user) return null;
+  const password = generatePassword(10);
+  const { error } = await db
+    .from("app_users")
+    .update({
+      password_hash: hashPassword(password),
+      status: "active",
+      active: true,
+      reset_requested: false,
+      decided_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  return { username: user.username, password, email: user.email };
+}
+
+/** El propio usuario cambia su contraseña (verifica la actual). */
+export async function changeOwnPassword(
+  username: string,
+  currentPw: string,
+  newPw: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const db = admin();
+  const { data: rows } = await db
+    .from("app_users")
+    .select("*")
+    .eq("username", username)
+    .eq("active", true)
+    .limit(1);
+  const user = rows && (rows[0] as AppUser);
+  if (!user || !user.password_hash) {
+    return { ok: false, error: "Cuenta no encontrada." };
+  }
+  const { verifyPassword } = await import("@/lib/password");
+  if (!verifyPassword(currentPw, user.password_hash)) {
+    return { ok: false, error: "La contraseña actual no es correcta." };
+  }
+  const { error } = await db
+    .from("app_users")
+    .update({ password_hash: hashPassword(newPw) })
+    .eq("id", user.id);
+  if (error) return { ok: false, error: "No se pudo actualizar." };
+  return { ok: true };
+}
+
+/** El usuario solicita restablecimiento (marca la bandera si existe la cuenta). */
+export async function requestReset(email: string): Promise<void> {
+  const db = admin();
+  await db
+    .from("app_users")
+    .update({ reset_requested: true })
+    .eq("email", email.trim().toLowerCase())
+    .eq("active", true);
 }

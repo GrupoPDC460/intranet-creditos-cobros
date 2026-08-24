@@ -23,6 +23,7 @@ export default async function SolicitudesPage() {
         username: u.username,
         fullName: u.full_name,
         role: u.role,
+        resetRequested: u.reset_requested,
       }))}
     />
   );

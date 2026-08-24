@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, Star, Shield, X, CornerDownLeft, ArrowUpRight } from "lucide-react";
+import { Search, Star, Shield, X, CornerDownLeft, ArrowUpRight, UserCircle } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
 import { resourceIcon, TYPE_TINT } from "@/lib/icons";
@@ -231,6 +231,15 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
             title="Mis favoritos"
           >
             <Star className="h-4 w-4" />
+          </Link>
+
+          <Link
+            href="/cuenta"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted transition-colors hover:text-white"
+            aria-label="Mi cuenta"
+            title="Mi cuenta"
+          >
+            <UserCircle className="h-4 w-4" />
           </Link>
 
           <Link
