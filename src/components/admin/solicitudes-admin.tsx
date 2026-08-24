@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Copy, UserPlus, Mail, ShieldCheck, Loader2, KeyRound, Trash2 } from "lucide-react";
+import { Check, X, Copy, UserPlus, Mail, ShieldCheck, Loader2, KeyRound, Trash2, UserCog } from "lucide-react";
 import { useToast } from "@/components/providers";
 import { Modal } from "@/components/admin/ui";
 
@@ -102,6 +102,27 @@ export function SolicitudesAdmin({
         setCreds({ username: data.username, password: data.password, email: data.email || "" });
       } else {
         toast(data.error ?? "No se pudo restablecer.", "error");
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function changeRole(id: string, role: "admin" | "member", label: string) {
+    const verb = role === "admin" ? "delegar como administrador a" : "quitar el rol de administrador a";
+    if (!window.confirm(`¿Deseas ${verb} ${label}?`)) return;
+    setBusy(id);
+    try {
+      const res = await fetch("/api/users/role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, role }),
+      });
+      if (res.ok) {
+        toast(role === "admin" ? "Ahora es administrador" : "Rol de administrador retirado", "success");
+        reload();
+      } else {
+        toast("No se pudo actualizar el rol.", "error");
       }
     } finally {
       setBusy(null);
@@ -237,6 +258,21 @@ export function SolicitudesAdmin({
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() =>
+                      changeRole(
+                        u.id,
+                        u.role === "admin" ? "member" : "admin",
+                        u.fullName || u.username,
+                      )
+                    }
+                    disabled={busy === u.id}
+                    className="btn btn-ghost"
+                    title={u.role === "admin" ? "Quitar rol de administrador" : "Delegar como administrador"}
+                  >
+                    <UserCog className="h-4 w-4" />
+                    {u.role === "admin" ? "Quitar admin" : "Hacer admin"}
+                  </button>
                   <button
                     onClick={() => reset(u.id)}
                     disabled={busy === u.id}

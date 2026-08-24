@@ -226,3 +226,10 @@ export async function countPending(): Promise<number> {
     .eq("reset_requested", true);
   return (pend.count || 0) + (resets.count || 0);
 }
+
+/** Cambia el rol de un usuario: 'admin' o 'member'. */
+export async function setRole(id: string, role: "admin" | "member"): Promise<void> {
+  const db = admin();
+  const { error } = await db.from("app_users").update({ role }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
