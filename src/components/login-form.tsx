@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail, Lock, User, Copy, Check } from "lucide-react";
+import { Loader2, Mail, Lock, User } from "lucide-react";
 
 const LOGO = (
   <div className="neu-logo">
@@ -26,8 +26,7 @@ export function LoginForm({ next }: { next: string }) {
   const [fullName, setFullName] = useState("");
   const [regError, setRegError] = useState<string | null>(null);
   const [regLoading, setRegLoading] = useState(false);
-  const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [requested, setRequested] = useState(false);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
@@ -63,15 +62,11 @@ export function LoginForm({ next }: { next: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, fullName }),
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        username?: string;
-        password?: string;
-      };
-      if (res.ok && data.username && data.password) {
-        setCreated({ username: data.username, password: data.password });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; pending?: boolean };
+      if (res.ok) {
+        setRequested(true);
       } else {
-        setRegError(data.error ?? "No se pudo crear la cuenta.");
+        setRegError(data.error ?? "No se pudo enviar la solicitud.");
       }
     } catch {
       setRegError("Error de red. Intenta de nuevo.");
@@ -80,55 +75,32 @@ export function LoginForm({ next }: { next: string }) {
     }
   }
 
-  function copyCreds() {
-    if (!created) return;
-    navigator.clipboard
-      ?.writeText(`Usuario: ${created.username}\nContraseña: ${created.password}`)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(() => {});
-  }
-
   function goSignIn() {
-    if (created) setUser(created.username);
     setSignUpMode(false);
   }
 
   return (
     <div className="neu-page">
       <div className={"neu-main" + (signUpMode ? " is-signup" : "")}>
-        {/* ---- Crear cuenta ---- */}
+        {/* ---- Solicitar acceso ---- */}
         <div className="neu-container neu-a">
-          {created ? (
+          {requested ? (
             <div className="neu-form">
-              <h2 className="neu-title">¡Cuenta creada!</h2>
-              <p className="neu-lead">Guarda estas credenciales, las necesitarás para entrar.</p>
-              <div className="neu-creds">
-                <div className="neu-creds__row">
-                  <span className="neu-creds__k">Usuario</span>
-                  <span className="neu-creds__v">{created.username}</span>
-                </div>
-                <div className="neu-creds__row">
-                  <span className="neu-creds__k">Contraseña</span>
-                  <span className="neu-creds__v">{created.password}</span>
-                </div>
-              </div>
-              <button type="button" className="neu-btn" onClick={copyCreds}>
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? "Copiado" : "Copiar"}
-              </button>
+              <h2 className="neu-title">Solicitud enviada</h2>
+              <p className="neu-lead">
+                Tu solicitud llegó al administrador. Cuando la apruebe, recibirás tu usuario y
+                contraseña para ingresar.
+              </p>
               <button type="button" className="neu-btn neu-btn--solid" onClick={goSignIn}>
-                Ir a iniciar sesión
+                Volver a iniciar sesión
               </button>
             </div>
           ) : (
             <form className="neu-form" onSubmit={register}>
-              <h2 className="neu-title">Crear cuenta</h2>
+              <h2 className="neu-title">Solicitar acceso</h2>
               <p className="neu-lead">
-                Regístrate con tu correo <strong>@grupopdc.com</strong>. Te generaremos usuario y
-                contraseña.
+                Solicita tu acceso con tu correo <strong>@grupopdc.com</strong>. El administrador
+                lo aprueba y te genera usuario y contraseña.
               </p>
               <div className="neu-field">
                 <User className="neu-ic" />
@@ -159,10 +131,10 @@ export function LoginForm({ next }: { next: string }) {
               >
                 {regLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Creando…
+                    <Loader2 className="h-4 w-4 animate-spin" /> Enviando…
                   </>
                 ) : (
-                  "Crear cuenta"
+                  "Solicitar acceso"
                 )}
               </button>
               <button type="button" className="neu-link" onClick={() => setSignUpMode(false)}>
@@ -240,10 +212,10 @@ export function LoginForm({ next }: { next: string }) {
             {LOGO}
             <h3 className="neu-switch__title">Créditos &amp; Cobros</h3>
             <p className="neu-switch__text">
-              ¿Nuevo en el equipo? Crea tu cuenta con tu correo @grupopdc.com.
+              ¿Nuevo en el equipo? Solicita tu acceso con tu correo @grupopdc.com.
             </p>
             <button type="button" className="neu-btn neu-btn--ghost" onClick={() => setSignUpMode(true)}>
-              Crear cuenta
+              Solicitar acceso
             </button>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { ALLOWED_DOMAIN, createUser, emailTaken, usersConfigured } from "@/lib/users";
-import { generatePassword } from "@/lib/password";
+import { ALLOWED_DOMAIN, createRequest, emailTaken, usersConfigured } from "@/lib/users";
 
 export const runtime = "nodejs";
 
@@ -9,7 +8,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(req: Request) {
   if (!usersConfigured()) {
     return NextResponse.json(
-      { error: "El registro no está disponible. Falta configurar la base de datos." },
+      { error: "El registro no está disponible por ahora." },
       { status: 503 },
     );
   }
@@ -33,19 +32,17 @@ export async function POST(req: Request) {
       { status: 422 },
     );
   }
-
   if (await emailTaken(email)) {
     return NextResponse.json(
-      { error: "Ya existe una cuenta con ese correo. Inicia sesión." },
+      { error: "Ya existe una cuenta o solicitud con ese correo." },
       { status: 409 },
     );
   }
 
-  const password = generatePassword(10);
   try {
-    const { username } = await createUser({ email, password, fullName });
-    return NextResponse.json({ ok: true, username, password, email });
+    await createRequest({ email, fullName });
+    return NextResponse.json({ ok: true, pending: true });
   } catch {
-    return NextResponse.json({ error: "No se pudo crear la cuenta." }, { status: 500 });
+    return NextResponse.json({ error: "No se pudo enviar la solicitud." }, { status: 500 });
   }
 }

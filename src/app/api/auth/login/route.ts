@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   if (!session && usersConfigured() && login) {
     try {
       const user = await getUserByLogin(login);
-      if (user && verifyPassword(password, user.password_hash)) {
+      if (user && user.password_hash && verifyPassword(password, user.password_hash)) {
         session = { sub: user.username, role: user.role };
       }
     } catch {

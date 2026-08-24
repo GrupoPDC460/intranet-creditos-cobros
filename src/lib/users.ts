@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, generatePassword } from "@/lib/password";
 
 export const ALLOWED_DOMAIN = "@grupopdc.com";
 
@@ -7,10 +7,13 @@ export interface AppUser {
   id: string;
   email: string;
   username: string;
-  password_hash: string;
+  password_hash: string | null;
   full_name: string | null;
   role: string;
+  status: string;
   active: boolean;
+  created_at: string;
+  decided_at: string | null;
 }
 
 export function usersConfigured(): boolean {
@@ -30,7 +33,7 @@ function admin() {
   );
 }
 
-/** Busca por correo o por usuario (exacto, sin distinguir may/min). */
+/** Login: solo usuarios activos con contraseña definida. */
 export async function getUserByLogin(login: string): Promise<AppUser | null> {
   const l = login.trim().toLowerCase();
   const db = admin();
@@ -56,7 +59,6 @@ async function exists(field: "email" | "username", value: string): Promise<boole
   return Boolean(data && data.length);
 }
 
-/** Genera un usuario único a partir del correo (parte antes de la @). */
 async function generateUsername(email: string): Promise<string> {
   const base =
     email
@@ -77,22 +79,63 @@ export async function emailTaken(email: string): Promise<boolean> {
   return exists("email", email.trim().toLowerCase());
 }
 
-/** Crea un usuario miembro. Devuelve el usuario generado (sin el hash). */
-export async function createUser(input: {
+/** Crea una SOLICITUD de acceso (pendiente de aval del administrador). */
+export async function createRequest(input: {
   email: string;
-  password: string;
   fullName?: string;
-}): Promise<{ username: string; email: string }> {
+}): Promise<void> {
   const email = input.email.trim().toLowerCase();
   const username = await generateUsername(email);
   const db = admin();
   const { error } = await db.from("app_users").insert({
     email,
     username,
-    password_hash: hashPassword(input.password),
+    password_hash: null,
     full_name: input.fullName?.trim() || null,
     role: "member",
+    status: "pending",
+    active: false,
   });
   if (error) throw new Error(error.message);
-  return { username, email };
+}
+
+/** Lista solicitudes/cuentas por estado (para el panel admin). */
+export async function listUsers(status?: string): Promise<AppUser[]> {
+  const db = admin();
+  let q = db.from("app_users").select("*").order("created_at", { ascending: false });
+  if (status) q = q.eq("status", status);
+  const { data } = await q;
+  return (data as AppUser[]) || [];
+}
+
+/** Aprueba una solicitud: genera contraseña, activa la cuenta y devuelve credenciales. */
+export async function approveRequest(
+  id: string,
+): Promise<{ username: string; password: string; email: string } | null> {
+  const db = admin();
+  const { data: rows } = await db.from("app_users").select("*").eq("id", id).limit(1);
+  const user = rows && (rows[0] as AppUser);
+  if (!user) return null;
+  const password = generatePassword(10);
+  const { error } = await db
+    .from("app_users")
+    .update({
+      password_hash: hashPassword(password),
+      status: "active",
+      active: true,
+      decided_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  return { username: user.username, password, email: user.email };
+}
+
+/** Rechaza una solicitud. */
+export async function rejectRequest(id: string): Promise<void> {
+  const db = admin();
+  const { error } = await db
+    .from("app_users")
+    .update({ status: "rejected", active: false, decided_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }

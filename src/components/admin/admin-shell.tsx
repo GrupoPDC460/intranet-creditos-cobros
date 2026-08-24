@@ -8,6 +8,7 @@ import {
   Link2,
   FolderTree,
   Star,
+  UserPlus,
   Settings,
   LogOut,
   ExternalLink,
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/admin/recursos", label: "Recursos", icon: Link2 },
   { href: "/admin/categorias", label: "Categorías", icon: FolderTree },
   { href: "/admin/destacados", label: "Destacados", icon: Star },
+  { href: "/admin/solicitudes", label: "Solicitudes", icon: UserPlus },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 
