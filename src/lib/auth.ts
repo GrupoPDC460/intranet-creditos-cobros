@@ -57,9 +57,15 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export async function createSessionToken(): Promise<string> {
-  const payload = {
-    sub: "admin",
+export type SessionPayload = { sub: string; role: string; exp: number };
+
+export async function createSessionToken(
+  sub = "admin",
+  role = "admin",
+): Promise<string> {
+  const payload: SessionPayload = {
+    sub,
+    role,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
   };
   const body = base64url(new TextEncoder().encode(JSON.stringify(payload)));
@@ -67,22 +73,24 @@ export async function createSessionToken(): Promise<string> {
   return `${body}.${sig}`;
 }
 
-export async function verifySessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+/** Verifica el token y devuelve el payload, o null si es inválido/expirado. */
+export async function verifySessionToken(
+  token: string | undefined,
+): Promise<SessionPayload | null> {
+  if (!token) return null;
   const [body, sig] = token.split(".");
-  if (!body || !sig) return false;
+  if (!body || !sig) return null;
   const expected = await hmac(body);
-  if (!safeEqual(sig, expected)) return false;
+  if (!safeEqual(sig, expected)) return null;
   try {
-    const payload = JSON.parse(new TextDecoder().decode(fromBase64url(body))) as {
-      sub: string;
-      exp: number;
-    };
-    if (payload.sub !== "admin") return false;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return false;
-    return true;
+    const payload = JSON.parse(
+      new TextDecoder().decode(fromBase64url(body)),
+    ) as SessionPayload;
+    if (!payload.sub || !payload.role) return null;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
   } catch {
-    return false;
+    return null;
   }
 }
 

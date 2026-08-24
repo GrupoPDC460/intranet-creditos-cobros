@@ -527,10 +527,34 @@
 .neu-switch__text { font-size: 0.85rem; line-height: 1.55; color: rgba(255, 255, 255, 0.85); margin-bottom: 24px; max-width: 280px; }
 
 /* ---- Lockup de marca PDC en el panel ---- */
-.neu-brand { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
-.neu-brand__grupo { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.4em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
-.neu-brand__pdc { font-size: 3rem; font-weight: 900; line-height: 0.9; letter-spacing: -0.02em; color: #fff; }
-.neu-brand__smile { width: 84px; height: auto; margin-top: 4px; }
+.neu-logo {
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px 22px;
+  margin-bottom: 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+.neu-logo img { width: 150px; height: auto; display: block; }
+
+/* Credenciales generadas */
+.neu-creds {
+  width: 100%;
+  margin: 4px 0 16px;
+  border-radius: 14px;
+  padding: 6px 14px;
+  background: var(--neu-bg);
+  box-shadow: inset 5px 5px 10px var(--neu-dark), inset -5px -5px 10px var(--neu-light);
+}
+.neu-creds__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+.neu-creds__row + .neu-creds__row { border-top: 1px solid rgba(0,0,0,0.06); }
+.neu-creds__k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--neu-muted); }
+.neu-creds__v { font-family: "Montserrat", monospace; font-weight: 700; color: var(--neu-navy); word-break: break-all; }
 
 /* ---- Responsive: en móvil, solo iniciar sesión ---- */
 @media (max-width: 640px) {

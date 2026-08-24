@@ -5,39 +5,53 @@ import {
   createSessionToken,
   sessionMaxAge,
 } from "@/lib/auth";
+import { getUserByLogin, usersConfigured } from "@/lib/users";
+import { verifyPassword } from "@/lib/password";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   let password = "";
-  let username = "";
+  let login = "";
   try {
     const body = (await req.json()) as { password?: string; username?: string };
     password = typeof body.password === "string" ? body.password : "";
-    username = typeof body.username === "string" ? body.username.trim() : "";
+    login = typeof body.username === "string" ? body.username.trim() : "";
   } catch {
     return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
   }
 
-  if (!process.env.ADMIN_PASSWORD) {
+  let session: { sub: string; role: string } | null = null;
+
+  // 1) Administrador maestro por variable de entorno (evita bloqueos).
+  const expectedUser = process.env.ADMIN_USER;
+  const userMatches =
+    !expectedUser || login.toLowerCase() === expectedUser.trim().toLowerCase();
+  if (process.env.ADMIN_PASSWORD && userMatches && checkPassword(password)) {
+    session = { sub: expectedUser || "admin", role: "admin" };
+  }
+
+  // 2) Usuario registrado en la tabla.
+  if (!session && usersConfigured() && login) {
+    try {
+      const user = await getUserByLogin(login);
+      if (user && verifyPassword(password, user.password_hash)) {
+        session = { sub: user.username, role: user.role };
+      }
+    } catch {
+      // Si falla la consulta, se trata como credenciales inválidas.
+    }
+  }
+
+  if (!session) {
     return NextResponse.json(
-      { error: "Autenticación no configurada. Define ADMIN_PASSWORD en el entorno." },
-      { status: 503 },
+      { error: "Usuario o contraseña incorrectos." },
+      { status: 401 },
     );
   }
 
-  // Si se define ADMIN_USER, el usuario también debe coincidir (sin distinguir may/min).
-  const expectedUser = process.env.ADMIN_USER;
-  if (expectedUser && username.toLowerCase() !== expectedUser.trim().toLowerCase()) {
-    return NextResponse.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
-  }
-
-  if (!checkPassword(password)) {
-    return NextResponse.json({ error: "Usuario o contraseña incorrectos." }, { status: 401 });
-  }
-
-  const token = await createSessionToken();
-  const res = NextResponse.json({ ok: true });
+  const token = await createSessionToken(session.sub, session.role);
+  const res = NextResponse.json({ ok: true, role: session.role });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
