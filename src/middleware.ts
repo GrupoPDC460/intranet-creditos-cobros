@@ -22,14 +22,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // El panel de administración exige rol admin.
-  if (req.nextUrl.pathname.startsWith("/admin") && session.role !== "admin") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 

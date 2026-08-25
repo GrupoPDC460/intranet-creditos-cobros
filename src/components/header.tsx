@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Search, Star, Shield, X, CornerDownLeft, ArrowUpRight, UserCircle } from "lucide-react";
+import { Search, Star, Shield, X, CornerDownLeft, ArrowUpRight, UserCircle, LogOut } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
 import { resourceIcon, TYPE_TINT } from "@/lib/icons";
@@ -241,6 +241,18 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
           >
             <UserCircle className="h-4 w-4" />
           </Link>
+
+          <button
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              window.location.assign("/login");
+            }}
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted transition-colors hover:text-rose-300"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
 
           <Link
             href="/admin"
