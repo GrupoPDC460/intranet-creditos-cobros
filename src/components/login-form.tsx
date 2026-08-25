@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 
 const LOGO = (
   <div className="neu-logo">
@@ -18,6 +18,7 @@ export function LoginForm({ next }: { next: string }) {
   // Iniciar sesión
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -181,13 +182,23 @@ export function LoginForm({ next }: { next: string }) {
             <div className="neu-field">
               <Lock className="neu-ic" />
               <input
-                className="neu-input"
-                type="password"
+                className="neu-input neu-input--eye"
+                type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Contraseña"
                 autoComplete="current-password"
               />
+              <button
+                type="button"
+                className="neu-eye"
+                onClick={() => setShowPw((s) => !s)}
+                aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+                title={showPw ? "Ocultar" : "Mostrar"}
+                tabIndex={-1}
+              >
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
             {error && <p className="neu-error">{error}</p>}
             <button

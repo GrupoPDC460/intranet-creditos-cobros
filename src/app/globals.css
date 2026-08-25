@@ -580,3 +580,22 @@
   border-radius: 12px;
   padding: 10px 12px;
 }
+
+/* Botón ver/ocultar contraseña en el login neumórfico */
+.neu-input--eye { padding-right: 42px; }
+.neu-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--neu-muted);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.neu-eye:hover { color: var(--neu-navy); }

@@ -2,7 +2,44 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff } from "lucide-react";
+
+function PwInput({
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  autoComplete: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="field pl-9 pr-10"
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-2.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted transition-colors hover:text-white"
+        aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+        title={show ? "Ocultar" : "Mostrar"}
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
   const router = useRouter();
@@ -49,38 +86,19 @@ export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
     }
   }
 
-  const field = (
-    value: string,
-    set: (v: string) => void,
-    ph: string,
-    auto: string,
-  ) => (
-    <div className="relative">
-      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-      <input
-        type="password"
-        value={value}
-        onChange={(e) => set(e.target.value)}
-        className="field pl-9"
-        placeholder={ph}
-        autoComplete={auto}
-      />
-    </div>
-  );
-
   return (
     <form onSubmit={submit} className="space-y-4">
       <div>
         <label className="label">Contraseña actual</label>
-        {field(current, setCurrent, "Tu contraseña actual", "current-password")}
+        <PwInput value={current} onChange={setCurrent} placeholder="Tu contraseña actual" autoComplete="current-password" />
       </div>
       <div>
         <label className="label">Nueva contraseña</label>
-        {field(next, setNext, "Mínimo 8 caracteres", "new-password")}
+        <PwInput value={next} onChange={setNext} placeholder="Mínimo 8 caracteres" autoComplete="new-password" />
       </div>
       <div>
         <label className="label">Confirmar nueva contraseña</label>
-        {field(confirm, setConfirm, "Repite la nueva contraseña", "new-password")}
+        <PwInput value={confirm} onChange={setConfirm} placeholder="Repite la nueva contraseña" autoComplete="new-password" />
       </div>
       {msg && (
         <p
