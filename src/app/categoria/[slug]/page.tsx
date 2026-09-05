@@ -4,6 +4,9 @@ import { ChevronLeft, PackageOpen } from "lucide-react";
 import { getPublicView } from "@/lib/data/public";
 import { SiteShell } from "@/components/site-shell";
 import { CategoryBrowser } from "@/components/category-browser";
+import { CulturaGallery } from "@/components/cultura-gallery";
+import { getAlbumsWithMeta } from "@/lib/cultura";
+import { isAdmin } from "@/lib/require-admin";
 import { Reveal, EmptyState } from "@/components/ui";
 import type { Metadata } from "next";
 
@@ -29,6 +32,9 @@ export default async function CategoryPage({
   if (!category) notFound();
 
   const resources = view.resources.filter((r) => r.categoryId === category.id);
+  const isCultura = category.slug === "cultura";
+  const albums = isCultura ? await getAlbumsWithMeta() : [];
+  const admin = isCultura ? await isAdmin() : false;
 
   return (
     <SiteShell data={{ categories: view.categories, resources: view.resources }}>
@@ -55,7 +61,9 @@ export default async function CategoryPage({
       </div>
 
       <div className="mt-10">
-        {resources.length === 0 ? (
+        {category.slug === "cultura" ? (
+          <CulturaGallery albums={albums} isAdmin={admin} />
+        ) : resources.length === 0 ? (
           <EmptyState
             icon={<PackageOpen className="h-5 w-5" />}
             title="Esta categoría aún no tiene recursos"
