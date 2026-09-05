@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, Folder, PackageOpen } from "lucide-react";
+import { ChevronLeft, Folder, PackageOpen, Star } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import type { Category, Resource, ResourceType } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
@@ -122,15 +122,40 @@ export function CategoryBrowser({
   }
 
   // ---- Carpetas: los departamentos de la categoría ----
+  const featured = resources.filter((r) => r.featured);
   return (
     <div>
-      <p className="mb-5 text-sm text-muted">Elige un departamento para ver sus recursos.</p>
+      {featured.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex items-center gap-2">
+            <Star className="h-4 w-4 text-gold" />
+            <h2 className="font-display text-lg font-semibold text-white">Accesos rápidos</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((r, i) => (
+              <Reveal key={r.id} index={i}>
+                <ResourceCard resource={r} index={i} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="mb-4 flex items-center gap-2">
+        <Folder className="h-4 w-4 text-brand-glow" />
+        <h2 className="font-display text-lg font-semibold text-white">Departamentos</h2>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {depts.map((d, i) => (
           <Reveal key={d.id} index={i}>
             <DeptFolder name={d.name} items={d.items} onClick={() => setOpenDept(d.id)} />
           </Reveal>
         ))}
+        {depts.length === 0 && (
+          <p className="col-span-full text-sm text-muted">
+            Esta cajita aún no tiene departamentos ni recursos.
+          </p>
+        )}
       </div>
     </div>
   );

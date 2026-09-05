@@ -9,47 +9,10 @@ import { cn } from "@/lib/utils";
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
-      <span className="relative grid h-9 w-9 place-items-center">
-        <svg viewBox="0 0 40 40" className="h-9 w-9" aria-hidden="true">
-          <defs>
-            <linearGradient id="pdc-mark" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#7DBFE6" />
-              <stop offset="1" stopColor="#00216F" />
-            </linearGradient>
-          </defs>
-          <rect
-            x="2.5"
-            y="2.5"
-            width="35"
-            height="35"
-            rx="11"
-            fill="url(#pdc-mark)"
-            opacity="0.16"
-          />
-          <rect
-            x="2.5"
-            y="2.5"
-            width="35"
-            height="35"
-            rx="11"
-            fill="none"
-            stroke="url(#pdc-mark)"
-            strokeWidth="1.3"
-            opacity="0.7"
-          />
-          {/* monograma: tres barras ascendentes = flujo de cartera */}
-          <rect x="11" y="22" width="4.5" height="8" rx="2.25" fill="#FF5100" />
-          <rect x="17.75" y="16" width="4.5" height="14" rx="2.25" fill="#7CB8FF" />
-          <rect x="24.5" y="10" width="4.5" height="20" rx="2.25" fill="#EAF0FF" />
-        </svg>
-      </span>
-      <span className="flex flex-col leading-none">
-        <span className="font-display text-[0.95rem] font-bold tracking-tight text-white">
-          Grupo PDC
-        </span>
-        <span className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-brand-glow">
-          Créditos &amp; Cobros
-        </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/pdc-logo-3d.png" alt="Grupo PDC" className="h-9 w-auto drop-shadow" />
+      <span className="hidden text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-brand-glow sm:inline">
+        Créditos &amp; Cobros
       </span>
     </span>
   );
