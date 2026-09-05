@@ -137,3 +137,17 @@ export async function addPhoto(
   if (error || !data) throw new Error(error?.message || "No se pudo registrar la foto.");
   return data[0] as Photo;
 }
+
+/** Actualiza nombre/descripcion/portada de un álbum. */
+export async function updateAlbum(
+  id: string,
+  patch: { name?: string; description?: string; cover_url?: string },
+): Promise<void> {
+  const upd: Record<string, unknown> = {};
+  if (patch.name !== undefined) upd.name = patch.name.trim();
+  if (patch.description !== undefined) upd.description = patch.description.trim() || null;
+  if (patch.cover_url !== undefined) upd.cover_url = patch.cover_url;
+  if (Object.keys(upd).length === 0) return;
+  const { error } = await db().from("cultura_albums").update(upd).eq("id", id);
+  if (error) throw new Error(error.message);
+}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Camera, Plus, Upload, X, ChevronLeft, ChevronRight, Trash2, Loader2, Images,
+  Play, Pencil, Star,
 } from "lucide-react";
 
 interface Album {
@@ -24,6 +25,45 @@ export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: 
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
+  // Slideshow: avanza automáticamente cuando está en "play".
+  useEffect(() => {
+    if (!playing || lightbox === null || photos.length === 0) return;
+    const t = setInterval(() => {
+      setLightbox((i) => (i === null ? 0 : (i + 1) % photos.length));
+    }, 3000);
+    return () => clearInterval(t);
+  }, [playing, lightbox, photos.length]);
+
+  function startSlideshow() {
+    if (!photos.length) return;
+    setLightbox(0);
+    setPlaying(true);
+  }
+
+  async function renameAlbum() {
+    if (!open) return;
+    const name = window.prompt("Nuevo nombre del álbum:", open.name);
+    if (!name?.trim() || name.trim() === open.name) return;
+    const res = await fetch("/api/cultura/albums", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: open.id, name }),
+    });
+    if (res.ok) reload();
+    else alert("No se pudo renombrar.");
+  }
+
+  async function setCover(url: string) {
+    if (!open) return;
+    const res = await fetch("/api/cultura/albums", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: open.id, coverUrl: url }),
+    });
+    if (res.ok) alert("Portada actualizada.");
+  }
 
   function reload() {
     setTimeout(() => window.location.assign("/categoria/cultura"), 400);
@@ -108,7 +148,10 @@ export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: 
             <h2 className="font-display text-2xl font-semibold text-white">{open.name}</h2>
             {open.description && <p className="text-sm text-muted">{open.description}</p>}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button onClick={startSlideshow} className="btn btn-ghost" title="Reproducir slideshow">
+              <Play className="h-4 w-4" /> Play
+            </button>
             <label className="btn btn-primary cursor-pointer">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Subir fotos
@@ -120,6 +163,11 @@ export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: 
                 onChange={(e) => upload(e.target.files)}
               />
             </label>
+            {isAdmin && (
+              <button onClick={renameAlbum} className="btn btn-ghost" title="Renombrar álbum">
+                <Pencil className="h-4 w-4" /> Renombrar
+              </button>
+            )}
             {isAdmin && (
               <button onClick={() => delAlbum(open.id)} className="btn btn-danger" title="Eliminar álbum">
                 <Trash2 className="h-4 w-4" />
@@ -148,13 +196,22 @@ export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: 
                   />
                 </button>
                 {isAdmin && (
-                  <button
-                    onClick={() => delPhoto(ph.id)}
-                    className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white opacity-0 transition-opacity hover:bg-rose-600 group-hover:opacity-100"
-                    title="Eliminar foto"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      onClick={() => setCover(ph.url)}
+                      className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-gold hover:text-ink"
+                      title="Hacer portada"
+                    >
+                      <Star className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => delPhoto(ph.id)}
+                      className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600"
+                      title="Eliminar foto"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

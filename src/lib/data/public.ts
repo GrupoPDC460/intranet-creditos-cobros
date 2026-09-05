@@ -9,7 +9,21 @@ export interface PublicView {
 
 /** Datos visibles al público: categorías y recursos activos, ya ordenados. */
 export async function getPublicView(): Promise<PublicView> {
-  const { categories, resources } = await getRepository().getAll();
+  // Reintento ante errores transitorios de Supabase (p.ej. PGRST303 por desfase
+  // de reloj), para que el portal no caiga a la pantalla de error.
+  let data: { categories: Category[]; resources: Resource[] } | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      data = await getRepository().getAll();
+      break;
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
+  }
+  if (!data) throw lastErr;
+  const { categories, resources } = data;
 
   const activeResources = resources
     .filter((r) => r.active)
