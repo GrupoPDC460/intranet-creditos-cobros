@@ -76,21 +76,19 @@
     position: absolute;
     inset: 0;
     background-size: cover;
-    background-position: center;
+    background-position: center top;
     opacity: 0;
-    transform: scale(1.06);
+    transform: scale(1.0);
     transition: opacity 1.8s ease-in-out;
-    will-change: opacity, transform;
+    will-change: opacity;
   }
   .brand-bg__layer.is-active {
     opacity: 1;
-    /* Zoom lento tipo "ken burns" mientras la capa está visible. */
-    animation: kenburns 40s ease-in-out infinite alternate;
   }
   .brand-bg__overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(3, 10, 34, 0.6) 0%, rgba(3, 10, 34, 0.8) 100%);
+    background: linear-gradient(180deg, rgba(3, 10, 34, 0.45) 0%, rgba(3, 10, 34, 0.72) 100%);
   }
 
   /* Fondo aurora: capas de gradiente que derivan suavemente detrás del vidrio. */
