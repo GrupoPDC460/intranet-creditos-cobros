@@ -198,8 +198,11 @@ export function SearchCommand({
 
 export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.08]">
-      <div className="glass-strong">
+    <header className="sticky top-0 z-50" style={{
+      background: "linear-gradient(90deg, #00216f 0%, #003399 45%, #1a5fa8 100%)",
+      borderBottom: "2px solid rgba(255,81,0,0.75)",
+    }}>
+      <div>
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
           <Link href="/" className="shrink-0" aria-label="Inicio">
             <Logo />
@@ -207,18 +210,18 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
 
           <button
             onClick={onOpenSearch}
-            className="ml-auto hidden min-w-[16rem] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-muted transition-colors hover:bg-white/[0.08] sm:flex"
+            className="ml-auto hidden min-w-[16rem] items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/20 hover:text-white sm:flex"
           >
             <Search className="h-4 w-4" />
             <span className="flex-1 text-left">Buscar recursos…</span>
-            <kbd className="rounded border border-white/15 bg-white/5 px-1.5 py-0.5 text-[0.68rem] font-semibold">
+            <kbd className="rounded border border-white/20 bg-white/10 px-1.5 py-0.5 text-[0.68rem] font-semibold text-white/50">
               ⌘K
             </kbd>
           </button>
 
           <button
             onClick={onOpenSearch}
-            className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted hover:text-white sm:hidden"
+            className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-white/10 text-white/70 hover:text-white sm:hidden"
             aria-label="Buscar"
           >
             <Search className="h-4 w-4" />
@@ -226,7 +229,7 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
 
           <Link
             href="/favoritos"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted transition-colors hover:text-gold"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
             aria-label="Mis favoritos"
             title="Mis favoritos"
           >
@@ -235,7 +238,7 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
 
           <Link
             href="/cuenta"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted transition-colors hover:text-white"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
             aria-label="Mi cuenta"
             title="Mi cuenta"
           >
@@ -247,7 +250,7 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
               await fetch("/api/auth/logout", { method: "POST" });
               window.location.assign("/login");
             }}
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-muted transition-colors hover:text-rose-300"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-white/10 text-white/70 transition-colors hover:bg-rose-500/30 hover:text-rose-200"
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
           >
@@ -256,7 +259,8 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
 
           <Link
             href="/admin"
-            className="hidden items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-white sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 sm:inline-flex"
+            style={{ background: "#ff5100" }}
           >
             <Shield className="h-4 w-4" />
             Admin
