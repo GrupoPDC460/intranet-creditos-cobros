@@ -128,35 +128,58 @@ export function CategoryGrid({
     <section className="mt-20">
       <SectionHeading eyebrow="Explorar" title="Categorías" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.map((c, i) => (
-          <Reveal key={c.id} index={i}>
-            <Link href={`/categoria/${c.slug}`} className="block h-full">
-              <SheenCard className="group h-full p-5">
-                <div className="relative z-[2] flex items-start justify-between">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-                    <LucideByName name={c.icon} className="h-6 w-6" />
-                  </span>
-                  <ArrowUpRight className="h-5 w-5 text-muted transition-colors group-hover:text-white" />
-                </div>
-                <h3 className="relative z-[2] mt-4 font-display text-lg font-semibold text-white">
-                  {c.name}
-                </h3>
-                {c.description && (
-                  <p className="relative z-[2] mt-1 line-clamp-2 text-sm text-muted">
-                    {c.description}
-                  </p>
-                )}
-                <div className="relative z-[2] mt-4 flex items-center gap-3 text-xs text-muted">
-                  <span className="chip">{counts[c.id] ?? 0} recursos</span>
-                  <span>
-                    {c.subcategories.length}{" "}
-                    {c.subcategories.length === 1 ? "departamento" : "departamentos"}
-                  </span>
-                </div>
-              </SheenCard>
-            </Link>
-          </Reveal>
-        ))}
+        {categories.map((c, i) => {
+          const isCultura = c.slug === "cultura";
+          return (
+            <Reveal key={c.id} index={i}>
+              <Link href={`/categoria/${c.slug}`} className="block h-full">
+                <SheenCard className="group h-full overflow-hidden p-0">
+                  {/* Portada especial para Cultura */}
+                  {isCultura && (
+                    <div className="relative flex h-28 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#00216f] to-[#1a5fa8]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/pdc-logo-3d.png"
+                        alt="Grupo PDC"
+                        className="h-20 w-auto object-contain opacity-90 drop-shadow-lg transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-white/50 transition-colors group-hover:text-white" />
+                    </div>
+                  )}
+                  <div className={isCultura ? "relative z-[2] p-5" : "relative z-[2] p-5"}>
+                    {!isCultura && (
+                      <div className="flex items-start justify-between">
+                        <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+                          <LucideByName name={c.icon} className="h-6 w-6" />
+                        </span>
+                        <ArrowUpRight className="h-5 w-5 text-muted transition-colors group-hover:text-white" />
+                      </div>
+                    )}
+                    <h3 className={`font-display text-lg font-semibold text-white ${!isCultura ? "mt-4" : ""}`}>
+                      {c.name}
+                    </h3>
+                    {c.description && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted">{c.description}</p>
+                    )}
+                    <div className="mt-4 flex items-center gap-3 text-xs text-muted">
+                      {isCultura ? (
+                        <span className="chip">📸 Galería de fotos</span>
+                      ) : (
+                        <>
+                          <span className="chip">{counts[c.id] ?? 0} recursos</span>
+                          <span>
+                            {c.subcategories.length}{" "}
+                            {c.subcategories.length === 1 ? "departamento" : "departamentos"}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </SheenCard>
+              </Link>
+            </Reveal>
+          );
+        })}
       </div>
     </section>
   );
