@@ -197,7 +197,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         <img src={ph.url} alt="" className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
         {/* Contador */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs text-white/70">
-          {lightbox + 1} / {curPhotos.length} · ← → navegar · Espacio pausar · Esc cerrar
+          {lightbox + 1} / {curPhotos.length}
         </div>
       </div>
     );
