@@ -5,7 +5,7 @@ import {
   Camera, Plus, Upload, X, ChevronLeft, ChevronRight, Trash2, Loader2,
   Images, Play, Pencil, FolderPlus, Sparkles, Pause, RotateCw,
   FolderInput, ArrowUp, ArrowDown, ImagePlus, CheckSquare, Square,
-  MoveRight,
+  MoveRight, Star,
 } from "lucide-react";
 
 interface Album {
@@ -501,11 +501,11 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         {/* Barra de selección */}
         <SelectionBar />
 
-        {/* Sub-álbumes */}
+        {/* Sub-álbumes — mismo grid y tamaño que carpetas principales */}
         {openAlbum.children && openAlbum.children.length > 0 && (
           <div className="mb-8">
             <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Carpetas</p>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {openAlbum.children.map(child => (
                 <AlbumCard key={child.id} album={child} onClick={() => openAlbumView(child)} />
               ))}
@@ -555,10 +555,18 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
                     {/* Acciones hover (solo si no está en modo selección) */}
                     {!selectMode && isAdmin && (
                       <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {/* Portada: ⭐ para sub-carpeta, 🖼 para carpeta raíz */}
                         <button onClick={e => { e.stopPropagation(); setCover(ph.url); }}
-                          className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-brand-glow hover:text-ink"
-                          title="Poner como portada">
-                          <ImagePlus className="h-3.5 w-3.5" />
+                          className={`grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white ${
+                            openAlbum?.parent_id
+                              ? "hover:bg-gold hover:text-ink"
+                              : "hover:bg-brand-glow hover:text-ink"
+                          }`}
+                          title={openAlbum?.parent_id ? "Portada de esta sub-carpeta (⭐)" : "Portada de carpeta principal (🖼)"}>
+                          {openAlbum?.parent_id
+                            ? <Star className="h-3.5 w-3.5" />
+                            : <ImagePlus className="h-3.5 w-3.5" />
+                          }
                         </button>
                         <button onClick={e => { e.stopPropagation(); delPhoto(ph.id); }}
                           className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600"
@@ -633,27 +641,54 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
 }
 
 function AlbumCard({ album, onClick }: { album: Album; onClick: () => void }) {
+  const isRoot = !album.parent_id;
   return (
-    <button onClick={onClick}
-      className="glass sheen group w-full overflow-hidden rounded-2xl text-left shadow-glass transition-transform duration-300 hover:-translate-y-1">
+    <button
+      onClick={onClick}
+      className="glass sheen group w-full overflow-hidden rounded-2xl text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
+    >
+      {/* Portada — aspect-ratio idéntico en ambos niveles para tamaño uniforme */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-white/5">
         {album.cover_url ? (
-          <img src={album.cover_url} alt=""
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <img
+            src={album.cover_url}
+            alt=""
+            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <div className="grid h-full w-full place-items-center text-muted">
             <Camera className="h-8 w-8 opacity-50" />
           </div>
         )}
+
+        {/* Badge de nivel — ícono diferente para raíz vs sub-carpeta */}
+        <span
+          className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-lg shadow ${
+            isRoot
+              ? "bg-brand-glow/25 text-brand-glow ring-1 ring-brand-glow/40"
+              : "bg-gold/25 text-gold ring-1 ring-gold/40"
+          }`}
+          title={isRoot ? "Carpeta principal — icono de portada: 🖼" : "Sub-carpeta — icono de portada: ⭐"}
+        >
+          {isRoot
+            ? <ImagePlus className="h-4 w-4" />
+            : <Star className="h-4 w-4" />
+          }
+        </span>
+
+        {/* Contador de sub-carpetas si las tiene */}
         {album.children && album.children.length > 0 && (
-          <span className="absolute bottom-2 right-2 rounded-md bg-black/50 px-1.5 py-0.5 text-[0.7rem] text-white">
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/55 px-1.5 py-0.5 text-[0.7rem] text-white">
             {album.children.length} carpeta{album.children.length !== 1 ? "s" : ""}
           </span>
         )}
       </div>
+
       <div className="relative z-[2] p-4">
         <h3 className="font-display text-lg font-semibold text-white">{album.name}</h3>
-        <p className="text-sm text-muted">{album.count} {album.count === 1 ? "foto" : "fotos"}</p>
+        <p className="text-sm text-muted">
+          {album.count} {album.count === 1 ? "foto" : "fotos"}
+        </p>
       </div>
     </button>
   );
