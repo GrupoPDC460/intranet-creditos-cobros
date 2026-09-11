@@ -8,6 +8,7 @@ export interface Album {
   description: string | null;
   cover_url: string | null;
   parent_id: string | null;
+  order: number;
   created_at: string;
 }
 export interface AlbumWithMeta extends Album {
@@ -37,7 +38,7 @@ function db() {
 }
 
 export async function getAllAlbums(): Promise<Album[]> {
-  const { data } = await db().from("cultura_albums").select("*").order("created_at", { ascending: false });
+  const { data } = await db().from("cultura_albums").select("*").order("order", { ascending: true });
   return (data as Album[]) || [];
 }
 
@@ -137,4 +138,21 @@ export async function savePhotoRotation(id: string, rotation: number): Promise<v
     .update({ rotation: final })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Mueve una foto a otro álbum. */
+export async function movePhoto(photoId: string, targetAlbumId: string): Promise<void> {
+  const { error } = await db()
+    .from("cultura_photos")
+    .update({ album_id: targetAlbumId })
+    .eq("id", photoId);
+  if (error) throw new Error(error.message);
+}
+
+/** Actualiza el orden de varios álbumes de una vez. */
+export async function reorderAlbums(items: { id: string; order: number }[]): Promise<void> {
+  const client = db();
+  for (const item of items) {
+    await client.from("cultura_albums").update({ order: item.order }).eq("id", item.id);
+  }
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Camera, Plus, Upload, X, ChevronLeft, ChevronRight, Trash2, Loader2,
-  Images, Play, Pencil, Star, FolderPlus, Sparkles, Pause, RotateCw,
+  Images, Play, Pencil, FolderPlus, Sparkles, Pause, RotateCw,
+  FolderInput, ArrowUp, ArrowDown, ImagePlus,
 } from "lucide-react";
 
 interface Album {
@@ -12,6 +13,7 @@ interface Album {
   description: string | null;
   cover_url: string | null;
   parent_id: string | null;
+  order: number;
   count: number;
   children: Album[];
 }
@@ -40,6 +42,10 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   const [memories, setMemories] = useState<Photo[]>([]);
   const [memLoading, setMemLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Modal para mover foto a otro álbum
+  const [movePhotoTarget, setMovePhotoTarget] = useState<Photo | null>(null);
+  // Lista plana de todos los álbumes para el selector de destino
+  const [allAlbumsList, setAllAlbumsList] = useState<{id:string;name:string;parent_id:string|null}[]>([]);
 
   function reload() { setTimeout(() => window.location.assign("/categoria/cultura"), 400); }
 
@@ -119,6 +125,41 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: photoId, rotation: next }),
     }).catch(console.error);
+  }
+
+  // Mover foto a otro álbum
+  async function doMovePhoto(photoId: string, targetAlbumId: string) {
+    const res = await fetch("/api/cultura/move", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photoId, targetAlbumId }),
+    });
+    if (res.ok) {
+      setPhotos((p) => p.filter((x) => x.id !== photoId));
+      setMovePhotoTarget(null);
+    } else { alert("No se pudo mover la foto."); }
+  }
+
+  // Reordenar álbumes principales: subir/bajar
+  async function moveAlbum(idx: number, dir: -1 | 1) {
+    const arr = [...albums];
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= arr.length) return;
+    [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+    const updated = arr.map((a, i) => ({ ...a, order: i + 1 }));
+    setAlbums(updated);
+    await fetch("/api/cultura/reorder", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated.map((a) => ({ id: a.id, order: a.order }))),
+    });
+  }
+
+  // Cargar lista plana de álbumes para el selector de destino
+  async function loadAllAlbums() {
+    const flatten = (list: Album[], acc: {id:string;name:string;parent_id:string|null}[] = []) => {
+      for (const a of list) { acc.push({id:a.id,name:a.name,parent_id:a.parent_id}); flatten(a.children,acc); }
+      return acc;
+    };
+    setAllAlbumsList(flatten(albums));
   }
 
   async function loadMemories() {
@@ -216,6 +257,39 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   // ── Lightbox compartido ────────────────────────────────────────────
   const curPhotos = view === "slideshow-all" ? allPhotos : (view === "memories" ? memories : photos);
 
+  // Modal para mover foto a otro álbum
+  function MoveModal() {
+    if (!movePhotoTarget) return null;
+    const current = openAlbum?.id;
+    const options = allAlbumsList.filter((a) => a.id !== current);
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4">
+        <div className="glass-strong w-full max-w-sm rounded-2xl p-6 shadow-glass-lg">
+          <h3 className="mb-4 font-display text-lg font-semibold text-white">Mover foto a…</h3>
+          <div className="max-h-64 space-y-2 overflow-y-auto">
+            {options.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => doMovePhoto(movePhotoTarget.id, a.id)}
+                className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm text-white transition-colors hover:bg-white/10"
+              >
+                <FolderInput className="h-4 w-4 shrink-0 text-brand-glow" />
+                {a.parent_id ? <span className="text-muted">↳ </span> : null}
+                {a.name}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setMovePhotoTarget(null)}
+            className="btn btn-ghost mt-4 w-full"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function Lightbox() {
     if (lightbox === null || curPhotos.length === 0) return null;
     const ph = curPhotos[lightbox];
@@ -282,7 +356,8 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   if (view === "memories") {
     return (
       <div>
-        <Lightbox />
+        <MoveModal />
+      <Lightbox />
         <button onClick={() => setView("root")} className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
           <ChevronLeft className="h-4 w-4" /> Álbumes
         </button>
@@ -314,7 +389,8 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   if (view === "album" && openAlbum) {
     return (
       <div>
-        <Lightbox />
+        <MoveModal />
+      <Lightbox />
         <button onClick={goBack}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
           <ChevronLeft className="h-4 w-4" />
@@ -381,8 +457,8 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
                   </button>
                   {isAdmin && (
                     <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button onClick={() => setCover(ph.url)} className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-gold hover:text-ink" title="Hacer portada">
-                        <Star className="h-3.5 w-3.5" />
+                      <button onClick={() => setCover(ph.url)} className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-brand-glow hover:text-ink" title="Poner como portada">
+                        <ImagePlus className="h-3.5 w-3.5" />
                       </button>
                       <button onClick={() => delPhoto(ph.id)} className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600" title="Eliminar">
                         <Trash2 className="h-3.5 w-3.5" />
@@ -400,6 +476,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   // ── Vista raíz: listado de álbumes ─────────────────────────────────
   return (
     <div>
+      <MoveModal />
       <Lightbox />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted">Álbumes de fotos de nuestras actividades.</p>
@@ -425,8 +502,26 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {albums.map((a) => (
-            <AlbumCard key={a.id} album={a} onClick={() => openAlbumView(a)} />
+          {albums.map((a, i) => (
+            <div key={a.id} className="relative">
+              <AlbumCard album={a} onClick={() => openAlbumView(a)} />
+              {isAdmin && (
+                <div className="absolute left-2 top-2 flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100 hover:opacity-100">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); moveAlbum(i, -1); }}
+                    disabled={i === 0}
+                    className="grid h-7 w-7 place-items-center rounded-lg bg-black/60 text-white hover:bg-brand-500 disabled:opacity-30"
+                    title="Subir"
+                  ><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); moveAlbum(i, 1); }}
+                    disabled={i === albums.length - 1}
+                    className="grid h-7 w-7 place-items-center rounded-lg bg-black/60 text-white hover:bg-brand-500 disabled:opacity-30"
+                    title="Bajar"
+                  ><ArrowDown className="h-3.5 w-3.5" /></button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
