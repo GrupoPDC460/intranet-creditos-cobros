@@ -40,6 +40,11 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   const [showMovePanel, setShowMovePanel] = useState(false);
   const [allAlbumsList, setAllAlbumsList] = useState<{id:string;name:string;parent_id:string|null}[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Selector de portada: navega fotos existentes para elegir portada de un álbum
+  const [coverPicker, setCoverPicker]         = useState<{ albumId: string; isRoot: boolean } | null>(null);
+  const [pickerAlbum, setPickerAlbum]         = useState<Album | null>(null);
+  const [pickerPhotos, setPickerPhotos]       = useState<Photo[]>([]);
+  const [pickerLoading, setPickerLoading]     = useState(false);
 
   // ── Teclado ────────────────────────────────────────────────────────
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -177,6 +182,33 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   }
 
   // ── Acciones de álbum ─────────────────────────────────────────────
+  // Abrir selector de portada — empieza en la raíz
+  function openCoverPicker(albumId: string, isRoot: boolean) {
+    setCoverPicker({ albumId, isRoot });
+    setPickerAlbum(null);
+    setPickerPhotos([]);
+  }
+
+  // Navegar a una carpeta dentro del selector
+  async function pickerOpenAlbum(a: Album) {
+    setPickerAlbum(a);
+    setPickerLoading(true);
+    try {
+      const res  = await fetch(`/api/cultura/photos?albumId=${a.id}`);
+      const data = (await res.json()) as { photos?: Photo[] };
+      setPickerPhotos(data.photos || []);
+    } finally { setPickerLoading(false); }
+  }
+
+  // Elegir una foto como portada desde el selector
+  async function pickerSetCover(ph: Photo) {
+    if (!coverPicker) return;
+    await setCover(ph.url, coverPicker.albumId, ph.id);
+    setCoverPicker(null); setPickerAlbum(null); setPickerPhotos([]);
+    // Recargar para que la tarjeta muestre la portada nueva
+    setTimeout(() => window.location.assign("/categoria/cultura"), 300);
+  }
+
   async function rotatePhoto(photoId: string) {
     const cur  = rotations[photoId] ?? 0;
     const next = (cur + 90) % 360;
@@ -313,6 +345,130 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
 
   // ── Lightbox ──────────────────────────────────────────────────────
   const curPhotos = view === "slideshow-all" ? allPhotos : (view === "memories" ? memories : photos);
+
+  // Modal selector de portada — navega carpetas y fotos existentes
+  function CoverPicker() {
+    if (!coverPicker) return null;
+    // Determinar las carpetas raíz a mostrar
+    const rootAlbums = albums;
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/85 p-4">
+        <div className="glass-strong flex w-full max-w-2xl flex-col rounded-2xl shadow-glass-lg overflow-hidden" style={{ maxHeight: "85vh" }}>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div className="flex items-center gap-2">
+              {pickerAlbum && (
+                <button
+                  onClick={() => { setPickerAlbum(null); setPickerPhotos([]); }}
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-muted hover:text-white"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <h3 className="font-display text-lg font-semibold text-white">
+                {pickerAlbum ? pickerAlbum.name : "Elige una carpeta"}
+              </h3>
+            </div>
+            <button onClick={() => { setCoverPicker(null); setPickerAlbum(null); setPickerPhotos([]); }}
+              className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-muted hover:text-white">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {!pickerAlbum ? (
+              /* Vista de carpetas raíz */
+              <div>
+                <p className="mb-3 text-xs text-muted">Entra a una carpeta para ver sus fotos</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {rootAlbums.map(a => (
+                    <button key={a.id} onClick={() => pickerOpenAlbum(a)}
+                      className="glass group overflow-hidden rounded-xl text-left transition-transform hover:-translate-y-0.5">
+                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-white/5">
+                        {a.cover_url ? (
+                          <img src={a.cover_url} alt="" className="h-full w-full object-cover"
+                            style={a.cover_rotation ? { transform: `rotate(${a.cover_rotation}deg)` } : undefined} />
+                        ) : (
+                          <div className="grid h-full place-items-center text-muted/50">
+                            <Camera className="h-6 w-6" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5">
+                        <p className="text-sm font-semibold text-white truncate">{a.name}</p>
+                        <p className="text-xs text-muted">{a.count} fotos{a.children.length > 0 ? ` · ${a.children.length} carpetas` : ""}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sub-carpetas de la carpeta abierta si las hay */}
+                {rootAlbums.some(a => a.children.length > 0) && (
+                  <div className="mt-4">
+                    {rootAlbums.filter(a => a.children.length > 0).map(parent => (
+                      <div key={parent.id} className="mb-3">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted">{parent.name}</p>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {parent.children.map(child => (
+                            <button key={child.id} onClick={() => pickerOpenAlbum(child)}
+                              className="glass group overflow-hidden rounded-xl text-left transition-transform hover:-translate-y-0.5">
+                              <div className="relative aspect-[16/10] w-full overflow-hidden bg-white/5">
+                                {child.cover_url ? (
+                                  <img src={child.cover_url} alt="" className="h-full w-full object-cover"
+                                    style={child.cover_rotation ? { transform: `rotate(${child.cover_rotation}deg)` } : undefined} />
+                                ) : (
+                                  <div className="grid h-full place-items-center text-muted/50">
+                                    <Camera className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2">
+                                <p className="text-xs font-semibold text-white truncate">{child.name}</p>
+                                <p className="text-[0.68rem] text-muted">{child.count} fotos</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : pickerLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-muted">
+                <Loader2 className="h-5 w-5 animate-spin" /> Cargando fotos…
+              </div>
+            ) : pickerPhotos.length === 0 ? (
+              <div className="py-10 text-center text-muted">
+                <Images className="mx-auto mb-2 h-7 w-7 opacity-50" />
+                Esta carpeta no tiene fotos.
+              </div>
+            ) : (
+              /* Vista de fotos — clic para elegir */
+              <div>
+                <p className="mb-3 text-xs text-muted">Clic en la foto que quieres usar de portada</p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {pickerPhotos.map(ph => (
+                    <button key={ph.id} onClick={() => pickerSetCover(ph)}
+                      className="group relative aspect-square overflow-hidden rounded-xl ring-2 ring-transparent transition-all hover:ring-brand-400">
+                      <img src={ph.url} alt="" loading="lazy"
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        style={rotations[ph.id] ?? ph.rotation ? { transform: `rotate(${rotations[ph.id] ?? ph.rotation}deg)` } : undefined} />
+                      <div className="absolute inset-0 grid place-items-center bg-black/0 transition-colors group-hover:bg-black/30">
+                        <span className="scale-0 rounded-lg bg-brand-500 px-2 py-1 text-xs font-bold text-white transition-transform group-hover:scale-100">
+                          Usar de portada
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function Lightbox() {
     if (lightbox === null || !curPhotos[lightbox]) return null;
@@ -516,7 +672,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
             <p className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Carpetas</p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {openAlbum.children.map(child => (
-                <AlbumCard key={child.id} album={child} onClick={() => openAlbumView(child)} />
+                <AlbumCard key={child.id} album={child} onClick={() => openAlbumView(child)} onPickCover={() => openCoverPicker(child.id, !child.parent_id)} />
               ))}
             </div>
           </div>
@@ -606,6 +762,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   // ── Vista raíz ────────────────────────────────────────────────────
   return (
     <div>
+      <CoverPicker />
       <Lightbox />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted">Álbumes de fotos de nuestras actividades.</p>
@@ -633,7 +790,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {albums.map((a, i) => (
             <div key={a.id} className="relative group/card">
-              <AlbumCard album={a} onClick={() => openAlbumView(a)} />
+              <AlbumCard album={a} onClick={() => openAlbumView(a)} onPickCover={() => openCoverPicker(a.id, !a.parent_id)} />
               {isAdmin && (
                 <div className="absolute left-2 top-2 flex flex-col gap-1 opacity-0 transition-opacity group-hover/card:opacity-100">
                   <button onClick={e => { e.stopPropagation(); moveAlbum(i, -1); }}
@@ -658,7 +815,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   );
 }
 
-function AlbumCard({ album, onClick }: { album: Album; onClick: () => void }) {
+function AlbumCard({ album, onClick, onPickCover }: { album: Album; onClick: () => void; onPickCover?: () => void }) {
   const isRoot = !album.parent_id;
   return (
     <button
@@ -680,20 +837,30 @@ function AlbumCard({ album, onClick }: { album: Album; onClick: () => void }) {
           </div>
         )}
 
-        {/* Badge de nivel — ícono diferente para raíz vs sub-carpeta */}
-        <span
-          className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-lg shadow ${
-            isRoot
-              ? "bg-brand-glow/25 text-brand-glow ring-1 ring-brand-glow/40"
-              : "bg-gold/25 text-gold ring-1 ring-gold/40"
-          }`}
-          title={isRoot ? "Carpeta principal — icono de portada: 🖼" : "Sub-carpeta — icono de portada: ⭐"}
-        >
-          {isRoot
-            ? <ImagePlus className="h-4 w-4" />
-            : <Star className="h-4 w-4" />
-          }
-        </span>
+        {/* Badge / botón de portada — clic abre el selector de imagen */}
+        {onPickCover ? (
+          <button
+            onClick={e => { e.stopPropagation(); onPickCover(); }}
+            className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-lg shadow transition-transform hover:scale-110 ${
+              isRoot
+                ? "bg-brand-glow/25 text-brand-glow ring-1 ring-brand-glow/40 hover:bg-brand-glow hover:text-ink"
+                : "bg-gold/25 text-gold ring-1 ring-gold/40 hover:bg-gold hover:text-ink"
+            }`}
+            title={isRoot ? "Elegir foto de portada (carpeta raíz)" : "Elegir foto de portada (sub-carpeta)"}
+          >
+            {isRoot ? <ImagePlus className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+          </button>
+        ) : (
+          <span
+            className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-lg shadow ${
+              isRoot
+                ? "bg-brand-glow/25 text-brand-glow ring-1 ring-brand-glow/40"
+                : "bg-gold/25 text-gold ring-1 ring-gold/40"
+            }`}
+          >
+            {isRoot ? <ImagePlus className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+          </span>
+        )}
 
         {/* Contador de sub-carpetas si las tiene */}
         {album.children && album.children.length > 0 && (
