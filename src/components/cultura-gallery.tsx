@@ -187,12 +187,20 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
     }).catch(console.error);
   }
 
-  async function setCover(url: string) {
-    if (!openAlbum) return;
+  async function setCover(url: string, albumId?: string) {
+    const id = albumId ?? openAlbum?.id;
+    if (!id) return;
     await fetch("/api/cultura/albums", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: openAlbum.id, coverUrl: url }),
+      body: JSON.stringify({ id, coverUrl: url }),
     });
+  }
+
+  // Busca el álbum raíz del stack actual (el que no tiene parent_id)
+  function getRootAlbum(): Album | null {
+    if (albumStack.length > 0) return albumStack[0];
+    if (openAlbum && !openAlbum.parent_id) return openAlbum;
+    return null;
   }
 
   async function upload(files: FileList | null) {
@@ -555,22 +563,31 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
                     {/* Acciones hover (solo si no está en modo selección) */}
                     {!selectMode && isAdmin && (
                       <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        {/* Portada: ⭐ para sub-carpeta, 🖼 para carpeta raíz */}
-                        <button onClick={e => { e.stopPropagation(); setCover(ph.url); }}
-                          className={`grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white ${
-                            openAlbum?.parent_id
-                              ? "hover:bg-gold hover:text-ink"
-                              : "hover:bg-brand-glow hover:text-ink"
-                          }`}
-                          title={openAlbum?.parent_id ? "Portada de esta sub-carpeta (⭐)" : "Portada de carpeta principal (🖼)"}>
-                          {openAlbum?.parent_id
-                            ? <Star className="h-3.5 w-3.5" />
-                            : <ImagePlus className="h-3.5 w-3.5" />
-                          }
-                        </button>
-                        <button onClick={e => { e.stopPropagation(); delPhoto(ph.id); }}
+                        {/* 🖼 Portada de la carpeta RAÍZ (siempre visible) */}
+                        {getRootAlbum() && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setCover(ph.url, getRootAlbum()!.id); }}
+                            className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-brand-glow hover:bg-brand-glow hover:text-ink"
+                            title={`Portada de carpeta raíz: "${getRootAlbum()!.name}"`}
+                          >
+                            <ImagePlus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {/* ⭐ Portada de la sub-carpeta actual (solo si estamos dentro de una sub-carpeta) */}
+                        {openAlbum?.parent_id && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setCover(ph.url, openAlbum.id); }}
+                            className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-gold hover:bg-gold hover:text-ink"
+                            title={`Portada de sub-carpeta: "${openAlbum.name}"`}
+                          >
+                            <Star className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={e => { e.stopPropagation(); delPhoto(ph.id); }}
                           className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600"
-                          title="Eliminar">
+                          title="Eliminar"
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
