@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as Icons from "lucide-react";
-import { Search, ArrowUpRight, Star, Sparkles } from "lucide-react";
+import { Search, ArrowUpRight, Star } from "lucide-react";
 import type { Category, Resource } from "@/lib/types";
 import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { useFavorites } from "@/components/providers";
@@ -21,31 +21,23 @@ export function Hero({
 }) {
   const openSearch = useOpenSearch();
   return (
-    <section className="pt-14 sm:pt-20">
+    <section className="pt-10 sm:pt-14">
+      {/* Banner de marca */}
       <Reveal>
-        <p className="chip mb-5">
-          <Sparkles className="h-3.5 w-3.5 text-gold" />
-          Un solo lugar. Todas nuestras herramientas.
-        </p>
+        <div className="mb-8 overflow-hidden rounded-2xl shadow-glass-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hero-banner.webp"
+            alt="Una venta es venta, hasta que está cobrada"
+            className="w-full object-cover"
+            style={{ maxHeight: "260px", objectPosition: "center" }}
+          />
+        </div>
       </Reveal>
       <Reveal index={1}>
-        <h1 className="max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl">
-          Todo lo que necesitas para{" "}
-          <span className="bg-gradient-to-r from-brand-glow to-brand-400 bg-clip-text text-transparent">
-            gestionar tu operación.
-          </span>
-        </h1>
-      </Reveal>
-      <Reveal index={2}>
-        <p className="mt-5 max-w-xl text-base text-muted sm:text-lg">
-          Accede rápidamente a sistemas, dashboards, reportes y herramientas de
-          Créditos &amp; Cobros.
-        </p>
-      </Reveal>
-      <Reveal index={3}>
         <button
           onClick={openSearch}
-          className="glass mt-8 flex w-full max-w-xl items-center gap-3 rounded-2xl px-5 py-4 text-left shadow-glass transition-colors hover:bg-white/[0.07]"
+          className="glass flex w-full max-w-xl items-center gap-3 rounded-2xl px-5 py-4 text-left shadow-glass transition-colors hover:bg-white/[0.07]"
         >
           <Search className="h-5 w-5 text-brand-glow" />
           <span className="flex-1 text-muted">Buscar sistemas, dashboards, KACE…</span>
@@ -54,8 +46,8 @@ export function Hero({
           </kbd>
         </button>
       </Reveal>
-      <Reveal index={4}>
-        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
+      <Reveal index={2}>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted">
           <span>
             <strong className="font-semibold text-white">{resourceCount}</strong> recursos
           </span>
