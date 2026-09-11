@@ -20,6 +20,7 @@ export interface Photo {
   url: string;
   path: string | null;
   caption: string | null;
+  rotation: number;
   created_at: string;
 }
 
@@ -124,4 +125,16 @@ export async function addPhoto(albumId: string, file: { name: string; type: stri
   const { data, error } = await client.from("cultura_photos").insert({ album_id: albumId, url: pub.publicUrl, path, caption: caption?.trim() || null }).select("*").limit(1);
   if (error || !data) throw new Error(error?.message || "No se pudo registrar la foto.");
   return data[0] as Photo;
+}
+
+/** Guarda la rotación persistente de una foto (0, 90, 180 o 270). */
+export async function savePhotoRotation(id: string, rotation: number): Promise<void> {
+  const r = ((rotation % 360) + 360) % 360;
+  const valid = [0, 90, 180, 270];
+  const final = valid.includes(r) ? r : 0;
+  const { error } = await db()
+    .from("cultura_photos")
+    .update({ rotation: final })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }

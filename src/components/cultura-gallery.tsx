@@ -15,7 +15,7 @@ interface Album {
   count: number;
   children: Album[];
 }
-interface Photo { id: string; album_id: string; url: string; caption: string | null; }
+interface Photo { id: string; album_id: string; url: string; caption: string | null; rotation: number; }
 
 type View = "root" | "album" | "memories" | "slideshow-all";
 
@@ -29,7 +29,12 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [rotation, setRotation] = useState<number>(0); // grados de rotación de la foto
+  // Rotaciones por foto {[photoId]: grados} — sincronizadas con la base de datos
+  const [rotations, setRotations] = useState<Record<string, number>>(() => {
+    // Inicializar con los valores de la base que vienen en cada foto
+    const init: Record<string, number> = {};
+    return init;
+  });
   const [playing, setPlaying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [memories, setMemories] = useState<Photo[]>([]);
@@ -42,17 +47,17 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   const handleKey = useCallback((e: KeyboardEvent) => {
     const cur = view === "slideshow-all" ? allPhotos : (view === "memories" ? memories : photos);
     if (lightbox === null) return;
-    if (e.key === "Escape") { setLightbox(null); setPlaying(false); setRotation(0); }
+    if (e.key === "Escape") { setLightbox(null); setPlaying(false); }
     // Tope: no pasa del último ni del primero
     if (e.key === "ArrowRight") {
-      setRotation(0);
       setLightbox((i) => (i === null || i >= cur.length - 1) ? i : i + 1);
     }
     if (e.key === "ArrowLeft") {
-      setRotation(0);
       setLightbox((i) => (i === null || i <= 0) ? i : i - 1);
     }
-    if (e.key === "r" || e.key === "R") setRotation((r) => (r + 90) % 360);
+    if ((e.key === "r" || e.key === "R") && lightbox !== null && curPhotos[lightbox]) {
+      rotatePhoto(curPhotos[lightbox].id);
+    }
     if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
   }, [lightbox, photos, allPhotos, memories, view]);
 
@@ -82,7 +87,12 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
     try {
       const res = await fetch(`/api/cultura/photos?albumId=${a.id}`);
       const data = (await res.json()) as { photos?: Photo[] };
-      setPhotos(data.photos || []);
+      const loaded = data.photos || [];
+      setPhotos(loaded);
+      // Cargar rotaciones persistidas desde la base
+      const rots: Record<string, number> = {};
+      for (const p of loaded) if (p.rotation) rots[p.id] = p.rotation;
+      setRotations((prev) => ({ ...prev, ...rots }));
     } finally { setLoading(false); }
   }
 
@@ -98,6 +108,19 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
   }
 
   // ── Recuerdos ─────────────────────────────────────────────────────
+  // Girar foto: actualiza estado local Y guarda en la base
+  async function rotatePhoto(photoId: string) {
+    const current = rotations[photoId] ?? 0;
+    const next = (current + 90) % 360;
+    setRotations((prev) => ({ ...prev, [photoId]: next }));
+    // Guardar en la base (fire-and-forget, no bloqueamos la UI)
+    fetch("/api/cultura/rotate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: photoId, rotation: next }),
+    }).catch(console.error);
+  }
+
   async function loadMemories() {
     setView("memories"); setMemLoading(true);
     try {
@@ -200,10 +223,10 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
     return (
       <div
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95"
-        onClick={() => { setLightbox(null); setPlaying(false); setRotation(0); }}
+        onClick={() => { setLightbox(null); setPlaying(false); }}
       >
         {/* Controles */}
-        <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => { setLightbox(null); setPlaying(false); setRotation(0); }}>
+        <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => { setLightbox(null); setPlaying(false); }}>
           <X className="h-5 w-5" />
         </button>
         <button className="absolute top-4 right-16 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setPlaying((p) => !p); }}>
@@ -212,13 +235,13 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         {/* Flechas */}
         {lightbox > 0 && (
           <button className="absolute left-4 top-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
-            onClick={(e) => { e.stopPropagation(); setRotation(0); setLightbox(lightbox - 1); }}>
+            onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }}>
             <ChevronLeft className="h-7 w-7" />
           </button>
         )}
         {lightbox < curPhotos.length - 1 && (
           <button className="absolute right-4 top-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
-            onClick={(e) => { e.stopPropagation(); setRotation(0); setLightbox(lightbox + 1); }}>
+            onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1); }}>
             <ChevronRight className="h-7 w-7" />
           </button>
         )}
@@ -226,7 +249,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
         <button
           className="absolute bottom-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
           title="Girar foto (R)"
-          onClick={(e) => { e.stopPropagation(); setRotation((r) => (r + 90) % 360); }}
+          onClick={(e) => { e.stopPropagation(); if (lightbox !== null && curPhotos[lightbox]) rotatePhoto(curPhotos[lightbox].id); }}
         >
           <RotateCw className="h-5 w-5" />
         </button>
@@ -234,7 +257,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
           src={ph.url}
           alt=""
           className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain transition-transform duration-300"
-          style={{ transform: `rotate(${rotation}deg)` }}
+          style={{ transform: `rotate(${rotations[ph.id] ?? 0}deg)` }}
           onClick={(e) => e.stopPropagation()}
         />
         {/* Contador */}
@@ -352,7 +375,9 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
               {photos.map((ph, i) => (
                 <div key={ph.id} className="group relative aspect-square overflow-hidden rounded-xl">
                   <button onClick={() => setLightbox(i)} className="h-full w-full">
-                    <img src={ph.url} alt={ph.caption || ""} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    <img src={ph.url} alt={ph.caption || ""} loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    style={rotations[ph.id] ? { transform: `rotate(${rotations[ph.id]}deg)`, objectFit: "cover" } : undefined} />
                   </button>
                   {isAdmin && (
                     <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
