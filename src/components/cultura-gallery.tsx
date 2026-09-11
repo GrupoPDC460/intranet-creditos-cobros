@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Camera, Plus, Upload, X, ChevronLeft, ChevronRight, Trash2, Loader2, Images,
-  Play, Pencil, Star,
+  Camera, Plus, Upload, X, ChevronLeft, ChevronRight, Trash2, Loader2,
+  Images, Play, Pencil, Star, FolderPlus, Sparkles, Pause,
 } from "lucide-react";
 
 interface Album {
@@ -11,112 +11,145 @@ interface Album {
   name: string;
   description: string | null;
   cover_url: string | null;
+  parent_id: string | null;
   count: number;
+  children: Album[];
 }
-interface Photo {
-  id: string;
-  url: string;
-  caption: string | null;
-}
+interface Photo { id: string; album_id: string; url: string; caption: string | null; }
 
-export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: boolean }) {
-  const [open, setOpen] = useState<Album | null>(null);
+type View = "root" | "album" | "memories" | "slideshow-all";
+
+export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; isAdmin: boolean }) {
+  const [albums, setAlbums] = useState<Album[]>(initial);
+  const [view, setView] = useState<View>("root");
+  const [openAlbum, setOpenAlbum] = useState<Album | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);  // para slideshow global
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [memories, setMemories] = useState<Photo[]>([]);
+  const [memLoading, setMemLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Slideshow: avanza automáticamente cuando está en "play".
+  function reload() { setTimeout(() => window.location.assign("/categoria/cultura"), 400); }
+
+  // ── Teclado ────────────────────────────────────────────────────────
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    const cur = view === "slideshow-all" ? allPhotos : photos;
+    if (lightbox === null && view !== "slideshow-all") return;
+    if (e.key === "Escape") { setLightbox(null); setPlaying(false); }
+    if (e.key === "ArrowRight") setLightbox((i) => i === null ? 0 : (i + 1) % cur.length);
+    if (e.key === "ArrowLeft") setLightbox((i) => i === null ? 0 : (i - 1 + cur.length) % cur.length);
+    if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
+  }, [lightbox, photos, allPhotos, view]);
+
   useEffect(() => {
-    if (!playing || lightbox === null || photos.length === 0) return;
-    const t = setInterval(() => {
-      setLightbox((i) => (i === null ? 0 : (i + 1) % photos.length));
-    }, 3000);
-    return () => clearInterval(t);
-  }, [playing, lightbox, photos.length]);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [handleKey]);
 
-  function startSlideshow() {
-    if (!photos.length) return;
-    setLightbox(0);
-    setPlaying(true);
-  }
+  // ── Slideshow automático ───────────────────────────────────────────
+  useEffect(() => {
+    const cur = view === "slideshow-all" ? allPhotos : photos;
+    if (playing && lightbox !== null && cur.length > 0) {
+      timerRef.current = setInterval(() => {
+        setLightbox((i) => i === null ? 0 : (i + 1) % cur.length);
+      }, 3000);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [playing, lightbox, photos, allPhotos, view]);
 
-  async function renameAlbum() {
-    if (!open) return;
-    const name = window.prompt("Nuevo nombre del álbum:", open.name);
-    if (!name?.trim() || name.trim() === open.name) return;
-    const res = await fetch("/api/cultura/albums", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: open.id, name }),
-    });
-    if (res.ok) reload();
-    else alert("No se pudo renombrar.");
-  }
-
-  async function setCover(url: string) {
-    if (!open) return;
-    const res = await fetch("/api/cultura/albums", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: open.id, coverUrl: url }),
-    });
-    if (res.ok) alert("Portada actualizada.");
-  }
-
-  function reload() {
-    setTimeout(() => window.location.assign("/categoria/cultura"), 400);
-  }
-
-  async function openAlbum(a: Album) {
-    setOpen(a);
-    setLoading(true);
+  // ── Cargar álbum ──────────────────────────────────────────────────
+  async function openAlbumView(a: Album) {
+    setOpenAlbum(a); setView("album"); setLoading(true);
     try {
       const res = await fetch(`/api/cultura/photos?albumId=${a.id}`);
       const data = (await res.json()) as { photos?: Photo[] };
       setPhotos(data.photos || []);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  async function newAlbum() {
-    const name = window.prompt("Nombre del álbum (ej. Convivio 2026):");
+  // ── Recuerdos ─────────────────────────────────────────────────────
+  async function loadMemories() {
+    setView("memories"); setMemLoading(true);
+    try {
+      const res = await fetch("/api/cultura/memories");
+      const data = (await res.json()) as { photos?: Photo[] };
+      setMemories(data.photos || []);
+    } finally { setMemLoading(false); }
+  }
+
+  // ── Reproducir todos los álbumes ──────────────────────────────────
+  async function startGlobalSlideshow() {
+    setView("slideshow-all"); setLoading(true);
+    try {
+      // Cargar fotos de todos los álbumes raíz e hijos
+      const ids: string[] = [];
+      const collect = (list: Album[]) => list.forEach((a) => { ids.push(a.id); collect(a.children); });
+      collect(albums);
+      const all: Photo[] = [];
+      for (const id of ids) {
+        const res = await fetch(`/api/cultura/photos?albumId=${id}`);
+        const data = (await res.json()) as { photos?: Photo[] };
+        all.push(...(data.photos || []));
+      }
+      setAllPhotos(all);
+      if (all.length > 0) { setLightbox(0); setPlaying(true); }
+    } finally { setLoading(false); }
+  }
+
+  // ── Acciones admin ────────────────────────────────────────────────
+  async function newAlbum(parentId?: string) {
+    const name = window.prompt(parentId ? "Nombre del sub-álbum (ej. Enero):" : "Nombre del álbum (ej. Cumpleañeros 2026):");
     if (!name?.trim()) return;
     const res = await fetch("/api/cultura/albums", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, parentId }),
     });
-    if (res.ok) reload();
-    else alert("No se pudo crear el álbum.");
+    if (res.ok) reload(); else alert("No se pudo crear el álbum.");
+  }
+
+  async function renameAlbum() {
+    if (!openAlbum) return;
+    const name = window.prompt("Nuevo nombre:", openAlbum.name);
+    if (!name?.trim() || name.trim() === openAlbum.name) return;
+    const res = await fetch("/api/cultura/albums", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: openAlbum.id, name }),
+    });
+    if (res.ok) reload(); else alert("No se pudo renombrar.");
+  }
+
+  async function setCover(url: string) {
+    if (!openAlbum) return;
+    await fetch("/api/cultura/albums", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: openAlbum.id, coverUrl: url }),
+    });
+    alert("Portada actualizada.");
   }
 
   async function upload(files: FileList | null) {
-    if (!open || !files || !files.length) return;
+    if (!openAlbum || !files || !files.length) return;
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append("albumId", open.id);
-        fd.append("file", file);
+        const fd = new FormData(); fd.append("albumId", openAlbum.id); fd.append("file", file);
         const res = await fetch("/api/cultura/upload", { method: "POST", body: fd });
         if (res.ok) {
           const { photo } = (await res.json()) as { photo: Photo };
           setPhotos((p) => [...p, photo]);
         }
       }
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   }
 
   async function delPhoto(id: string) {
     if (!window.confirm("¿Eliminar esta foto?")) return;
     const res = await fetch("/api/cultura/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ photoId: id }),
     });
     if (res.ok) setPhotos((p) => p.filter((x) => x.id !== id));
@@ -125,180 +158,235 @@ export function CulturaGallery({ albums, isAdmin }: { albums: Album[]; isAdmin: 
   async function delAlbum(id: string) {
     if (!window.confirm("¿Eliminar el álbum y todas sus fotos?")) return;
     const res = await fetch("/api/cultura/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ albumId: id }),
     });
     if (res.ok) reload();
   }
 
-  // ---- Vista de un álbum ----
-  if (open) {
+  // ── Lightbox compartido ────────────────────────────────────────────
+  const curPhotos = view === "slideshow-all" ? allPhotos : (view === "memories" ? memories : photos);
+
+  function Lightbox() {
+    if (lightbox === null || curPhotos.length === 0) return null;
+    const ph = curPhotos[lightbox];
+    if (!ph) return null;
+    return (
+      <div
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95"
+        onClick={() => { setLightbox(null); setPlaying(false); }}
+      >
+        {/* Controles */}
+        <button className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => { setLightbox(null); setPlaying(false); }}>
+          <X className="h-5 w-5" />
+        </button>
+        <button className="absolute top-4 right-16 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setPlaying((p) => !p); }}>
+          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+        </button>
+        {/* Flechas */}
+        {lightbox > 0 && (
+          <button className="absolute left-4 top-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }}>
+            <ChevronLeft className="h-7 w-7" />
+          </button>
+        )}
+        {lightbox < curPhotos.length - 1 && (
+          <button className="absolute right-4 top-1/2 -translate-y-1/2 grid h-12 w-12 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1); }}>
+            <ChevronRight className="h-7 w-7" />
+          </button>
+        )}
+        <img src={ph.url} alt="" className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+        {/* Contador */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs text-white/70">
+          {lightbox + 1} / {curPhotos.length} · ← → navegar · Espacio pausar · Esc cerrar
+        </div>
+      </div>
+    );
+  }
+
+  // ── Vista: Slideshow global (pantalla completa cargando) ───────────
+  if (view === "slideshow-all" && loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-muted">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p>Cargando todas las fotos…</p>
+      </div>
+    );
+  }
+
+  // ── Vista: Recuerdos ──────────────────────────────────────────────
+  if (view === "memories") {
     return (
       <div>
-        <button
-          onClick={() => { setOpen(null); setPhotos([]); }}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
-        >
+        <Lightbox />
+        <button onClick={() => setView("root")} className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
           <ChevronLeft className="h-4 w-4" /> Álbumes
         </button>
-
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display text-2xl font-semibold text-white">{open.name}</h2>
-            {open.description && <p className="text-sm text-muted">{open.description}</p>}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={startSlideshow} className="btn btn-ghost" title="Reproducir slideshow">
-              <Play className="h-4 w-4" /> Play
-            </button>
-            <label className="btn btn-primary cursor-pointer">
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Subir fotos
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => upload(e.target.files)}
-              />
-            </label>
-            {isAdmin && (
-              <button onClick={renameAlbum} className="btn btn-ghost" title="Renombrar álbum">
-                <Pencil className="h-4 w-4" /> Renombrar
-              </button>
-            )}
-            {isAdmin && (
-              <button onClick={() => delAlbum(open.id)} className="btn btn-danger" title="Eliminar álbum">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+        <div className="mb-6 flex items-center gap-3">
+          <Sparkles className="h-5 w-5 text-gold" />
+          <h2 className="font-display text-2xl font-semibold text-white">Recuerdos</h2>
         </div>
-
-        {loading ? (
-          <p className="text-muted">Cargando fotos…</p>
-        ) : photos.length === 0 ? (
+        {memLoading ? (
+          <div className="flex items-center gap-2 text-muted"><Loader2 className="h-5 w-5 animate-spin" /> Cargando recuerdos…</div>
+        ) : memories.length === 0 ? (
           <div className="glass rounded-2xl p-10 text-center text-muted">
             <Images className="mx-auto mb-2 h-7 w-7 opacity-60" />
-            Aún no hay fotos. Usa <strong className="text-white">Subir fotos</strong> para agregarlas.
+            Aún no hay fotos para mostrar recuerdos.
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {photos.map((ph, i) => (
-              <div key={ph.id} className="group relative aspect-square overflow-hidden rounded-xl">
-                <button onClick={() => setLightbox(i)} className="h-full w-full">
-                  <img
-                    src={ph.url}
-                    alt={ph.caption || ""}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </button>
-                {isAdmin && (
-                  <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={() => setCover(ph.url)}
-                      className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-gold hover:text-ink"
-                      title="Hacer portada"
-                    >
-                      <Star className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => delPhoto(ph.id)}
-                      className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600"
-                      title="Eliminar foto"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
+            {memories.map((ph, i) => (
+              <button key={ph.id} onClick={() => setLightbox(i)} className="group relative aspect-square overflow-hidden rounded-xl">
+                <img src={ph.url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+              </button>
             ))}
-          </div>
-        )}
-
-        {/* Lightbox */}
-        {lightbox !== null && photos[lightbox] && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-            onClick={() => setLightbox(null)}
-          >
-            <button className="absolute right-4 top-4 text-white/80 hover:text-white" onClick={() => setLightbox(null)}>
-              <X className="h-7 w-7" />
-            </button>
-            {lightbox > 0 && (
-              <button
-                className="absolute left-4 text-white/80 hover:text-white"
-                onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }}
-              >
-                <ChevronLeft className="h-9 w-9" />
-              </button>
-            )}
-            <img
-              src={photos[lightbox].url}
-              alt=""
-              className="max-h-[90vh] max-w-[92vw] rounded-lg object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-            {lightbox < photos.length - 1 && (
-              <button
-                className="absolute right-4 text-white/80 hover:text-white"
-                onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1); }}
-              >
-                <ChevronRight className="h-9 w-9" />
-              </button>
-            )}
           </div>
         )}
       </div>
     );
   }
 
-  // ---- Vista de álbumes ----
+  // ── Vista: Dentro de un álbum ────────────────────────────────────
+  if (view === "album" && openAlbum) {
+    return (
+      <div>
+        <Lightbox />
+        <button onClick={() => { setView("root"); setOpenAlbum(null); setPhotos([]); }}
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
+          <ChevronLeft className="h-4 w-4" /> Álbumes
+        </button>
+
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-white">{openAlbum.name}</h2>
+            {openAlbum.description && <p className="text-sm text-muted">{openAlbum.description}</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => { setLightbox(0); setPlaying(true); }} disabled={photos.length === 0} className="btn btn-ghost">
+              <Play className="h-4 w-4" /> Play
+            </button>
+            <label className="btn btn-primary cursor-pointer">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Subir fotos
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => upload(e.target.files)} />
+            </label>
+            {isAdmin && (
+              <>
+                <button onClick={() => newAlbum(openAlbum.id)} className="btn btn-ghost" title="Crear sub-álbum">
+                  <FolderPlus className="h-4 w-4" /> Sub-álbum
+                </button>
+                <button onClick={renameAlbum} className="btn btn-ghost">
+                  <Pencil className="h-4 w-4" /> Renombrar
+                </button>
+                <button onClick={() => delAlbum(openAlbum.id)} className="btn btn-danger">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Sub-álbumes */}
+        {openAlbum.children && openAlbum.children.length > 0 && (
+          <div className="mb-8">
+            <p className="mb-3 text-sm font-semibold text-muted uppercase tracking-wide">Carpetas</p>
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {openAlbum.children.map((child) => (
+                <AlbumCard key={child.id} album={child} onClick={() => openAlbumView(child)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Fotos */}
+        {loading ? <p className="text-muted">Cargando fotos…</p> :
+          photos.length === 0 ? (
+            <div className="glass rounded-2xl p-10 text-center text-muted">
+              <Images className="mx-auto mb-2 h-7 w-7 opacity-60" />
+              Aún no hay fotos. Usa <strong className="text-white">Subir fotos</strong> para agregarlas.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {photos.map((ph, i) => (
+                <div key={ph.id} className="group relative aspect-square overflow-hidden rounded-xl">
+                  <button onClick={() => setLightbox(i)} className="h-full w-full">
+                    <img src={ph.url} alt={ph.caption || ""} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  </button>
+                  {isAdmin && (
+                    <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button onClick={() => setCover(ph.url)} className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-gold hover:text-ink" title="Hacer portada">
+                        <Star className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => delPhoto(ph.id)} className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600" title="Eliminar">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+      </div>
+    );
+  }
+
+  // ── Vista raíz: listado de álbumes ─────────────────────────────────
   return (
     <div>
+      <Lightbox />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted">Álbumes de fotos de nuestras actividades.</p>
-        {isAdmin && (
-          <button onClick={newAlbum} className="btn btn-primary">
-            <Plus className="h-4 w-4" /> Nuevo álbum
+        <div className="flex gap-2">
+          <button onClick={loadMemories} className="btn btn-ghost">
+            <Sparkles className="h-4 w-4 text-gold" /> Recuerdos
           </button>
-        )}
+          <button onClick={startGlobalSlideshow} className="btn btn-ghost">
+            <Play className="h-4 w-4" /> Reproducir todo
+          </button>
+          {isAdmin && (
+            <button onClick={() => newAlbum()} className="btn btn-primary">
+              <Plus className="h-4 w-4" /> Nuevo álbum
+            </button>
+          )}
+        </div>
       </div>
 
       {albums.length === 0 ? (
         <div className="glass rounded-2xl p-12 text-center text-muted">
           <Camera className="mx-auto mb-3 h-8 w-8 opacity-60" />
-          Aún no hay álbumes.{isAdmin ? " Crea el primero con “Nuevo álbum”." : ""}
+          Aún no hay álbumes. {isAdmin ? 'Crea el primero con "Nuevo álbum".' : ""}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {albums.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => openAlbum(a)}
-              className="glass sheen group overflow-hidden rounded-2xl text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
-            >
-              <div className="relative aspect-[16/10] w-full overflow-hidden bg-white/5">
-                {a.cover_url ? (
-                  <img src={a.cover_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                ) : (
-                  <div className="grid h-full w-full place-items-center text-muted">
-                    <Camera className="h-8 w-8 opacity-50" />
-                  </div>
-                )}
-              </div>
-              <div className="relative z-[2] p-4">
-                <h3 className="font-display text-lg font-semibold text-white">{a.name}</h3>
-                <p className="text-sm text-muted">
-                  {a.count} {a.count === 1 ? "foto" : "fotos"}
-                </p>
-              </div>
-            </button>
+            <AlbumCard key={a.id} album={a} onClick={() => openAlbumView(a)} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function AlbumCard({ album, onClick }: { album: Album; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="glass sheen group overflow-hidden rounded-2xl text-left shadow-glass transition-transform duration-300 hover:-translate-y-1">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-white/5">
+        {album.cover_url ? (
+          <img src={album.cover_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-muted">
+            <Camera className="h-8 w-8 opacity-50" />
+          </div>
+        )}
+        {album.children && album.children.length > 0 && (
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/50 px-1.5 py-0.5 text-[0.7rem] text-white">
+            {album.children.length} carpeta{album.children.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+      <div className="relative z-[2] p-4">
+        <h3 className="font-display text-lg font-semibold text-white">{album.name}</h3>
+        <p className="text-sm text-muted">{album.count} {album.count === 1 ? "foto" : "fotos"}</p>
+      </div>
+    </button>
   );
 }
