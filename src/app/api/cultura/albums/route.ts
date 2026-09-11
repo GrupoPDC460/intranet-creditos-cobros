@@ -21,14 +21,14 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  let id = "", name: string | undefined, description: string | undefined, coverUrl: string | undefined;
+  let id = "", name: string | undefined, description: string | undefined, coverUrl: string | undefined, coverRotation: number | undefined;
   try {
-    const b = (await req.json()) as { id?: string; name?: string; description?: string; coverUrl?: string };
-    id = b.id ?? ""; name = b.name; description = b.description; coverUrl = b.coverUrl;
+    const b = (await req.json()) as { id?: string; name?: string; description?: string; coverUrl?: string; coverRotation?: number };
+    id = b.id ?? ""; name = b.name; description = b.description; coverUrl = b.coverUrl; coverRotation = b.coverRotation;
   } catch { return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 }); }
   if (!id) return NextResponse.json({ error: "Falta id." }, { status: 400 });
   try {
-    await updateAlbum(id, { name, description, cover_url: coverUrl });
+    await updateAlbum(id, { name, description, cover_url: coverUrl, cover_rotation: coverRotation });
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "No se pudo actualizar." }, { status: 500 }); }
 }

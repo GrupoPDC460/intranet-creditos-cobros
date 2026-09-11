@@ -9,6 +9,7 @@ export interface Album {
   cover_url: string | null;
   parent_id: string | null;
   order: number;
+  cover_rotation: number;
   created_at: string;
 }
 export interface AlbumWithMeta extends Album {
@@ -89,11 +90,12 @@ export async function createAlbum(name: string, description?: string, parentId?:
   return data[0] as Album;
 }
 
-export async function updateAlbum(id: string, patch: { name?: string; description?: string; cover_url?: string }): Promise<void> {
+export async function updateAlbum(id: string, patch: { name?: string; description?: string; cover_url?: string; cover_rotation?: number }): Promise<void> {
   const upd: Record<string, unknown> = {};
   if (patch.name !== undefined) upd.name = patch.name.trim();
   if (patch.description !== undefined) upd.description = patch.description.trim() || null;
   if (patch.cover_url !== undefined) upd.cover_url = patch.cover_url;
+  if (patch.cover_rotation !== undefined) upd.cover_rotation = patch.cover_rotation;
   if (Object.keys(upd).length === 0) return;
   const { error } = await db().from("cultura_albums").update(upd).eq("id", id);
   if (error) throw new Error(error.message);

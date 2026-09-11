@@ -11,7 +11,7 @@ import {
 interface Album {
   id: string; name: string; description: string | null;
   cover_url: string | null; parent_id: string | null;
-  order: number; count: number; children: Album[];
+  order: number; cover_rotation: number; count: number; children: Album[];
 }
 interface Photo {
   id: string; album_id: string; url: string;
@@ -187,12 +187,13 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
     }).catch(console.error);
   }
 
-  async function setCover(url: string, albumId?: string) {
+  async function setCover(url: string, albumId?: string, photoId?: string) {
     const id = albumId ?? openAlbum?.id;
     if (!id) return;
+    const rot = photoId ? (rotations[photoId] ?? 0) : 0;
     await fetch("/api/cultura/albums", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, coverUrl: url }),
+      body: JSON.stringify({ id, coverUrl: url, coverRotation: rot }),
     });
   }
 
@@ -566,7 +567,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
                         {/* 🖼 Portada de la carpeta RAÍZ (siempre visible) */}
                         {getRootAlbum() && (
                           <button
-                            onClick={e => { e.stopPropagation(); setCover(ph.url, getRootAlbum()!.id); }}
+                            onClick={e => { e.stopPropagation(); setCover(ph.url, getRootAlbum()!.id, ph.id); }}
                             className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-brand-glow hover:bg-brand-glow hover:text-ink"
                             title={`Portada de carpeta raíz: "${getRootAlbum()!.name}"`}
                           >
@@ -576,7 +577,7 @@ export function CulturaGallery({ albums: initial, isAdmin }: { albums: Album[]; 
                         {/* ⭐ Portada de la sub-carpeta actual (solo si estamos dentro de una sub-carpeta) */}
                         {openAlbum?.parent_id && (
                           <button
-                            onClick={e => { e.stopPropagation(); setCover(ph.url, openAlbum.id); }}
+                            onClick={e => { e.stopPropagation(); setCover(ph.url, openAlbum.id, ph.id); }}
                             className="grid h-7 w-7 place-items-center rounded-lg bg-black/50 text-gold hover:bg-gold hover:text-ink"
                             title={`Portada de sub-carpeta: "${openAlbum.name}"`}
                           >
@@ -671,6 +672,7 @@ function AlbumCard({ album, onClick }: { album: Album; onClick: () => void }) {
             src={album.cover_url}
             alt=""
             className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            style={album.cover_rotation ? { transform: `rotate(${album.cover_rotation}deg)` } : undefined}
           />
         ) : (
           <div className="grid h-full w-full place-items-center text-muted">
