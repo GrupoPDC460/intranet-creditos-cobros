@@ -156,3 +156,12 @@ export async function reorderAlbums(items: { id: string; order: number }[]): Pro
     await client.from("cultura_albums").update({ order: item.order }).eq("id", item.id);
   }
 }
+
+/** Mueve varias fotos a otro álbum de una vez. */
+export async function movePhotos(photoIds: string[], targetAlbumId: string): Promise<void> {
+  const { error } = await db()
+    .from("cultura_photos")
+    .update({ album_id: targetAlbumId })
+    .in("id", photoIds);
+  if (error) throw new Error(error.message);
+}
