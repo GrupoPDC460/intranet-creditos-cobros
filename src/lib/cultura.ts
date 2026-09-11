@@ -167,3 +167,12 @@ export async function movePhotos(photoIds: string[], targetAlbumId: string): Pro
     .in("id", photoIds);
   if (error) throw new Error(error.message);
 }
+
+/** Mueve un álbum dentro de otro (lo convierte en sub-carpeta). */
+export async function moveAlbumInto(albumId: string, newParentId: string | null): Promise<void> {
+  const { error } = await db()
+    .from("cultura_albums")
+    .update({ parent_id: newParentId })
+    .eq("id", albumId);
+  if (error) throw new Error(error.message);
+}
