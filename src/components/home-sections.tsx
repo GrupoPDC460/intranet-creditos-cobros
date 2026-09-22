@@ -122,34 +122,63 @@ export function CategoryGrid({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((c, i) => {
           const isCultura = c.slug === "cultura";
+          const accent = c.accent_color ?? null;
+          const hasCover = !!c.cover_image;
           return (
             <Reveal key={c.id} index={i}>
               <Link href={`/categoria/${c.slug}`} className="block h-full">
                 <SheenCard className="group h-full overflow-hidden p-0">
-                  {/* Portada especial para Cultura */}
-                  {isCultura && (
-                    <div className="relative flex h-28 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#00216f] to-[#1a5fa8]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/pdc-logo-3d.png"
-                        alt="Grupo PDC"
-                        className="h-20 w-auto object-contain opacity-90 drop-shadow-lg transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-white/50 transition-colors group-hover:text-white" />
+                  {/* Portada: imagen personalizada o degradado de Cultura */}
+                  {(isCultura || hasCover) && (
+                    <div
+                      className="relative h-28 w-full overflow-hidden"
+                      style={
+                        accent && !hasCover
+                          ? { background: `linear-gradient(135deg, ${accent}33 0%, ${accent}11 100%)` }
+                          : { background: "linear-gradient(135deg, #00216f 0%, #1a5fa8 100%)" }
+                      }
+                    >
+                      {hasCover && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.cover_image!}
+                          alt={c.name}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      )}
+                      {isCultura && !hasCover && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src="/pdc-logo-3d.png"
+                          alt="Grupo PDC"
+                          className="absolute left-1/2 top-1/2 h-20 w-auto -translate-x-1/2 -translate-y-1/2 object-contain opacity-90 drop-shadow-lg transition-transform duration-500 group-hover:scale-105"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-white/60 transition-colors group-hover:text-white" />
                     </div>
                   )}
-                  <div className={isCultura ? "relative z-[2] p-5" : "relative z-[2] p-5"}>
-                    {!isCultura && (
+                  <div className="relative z-[2] p-5">
+                    {!isCultura && !hasCover && (
                       <div className="flex items-start justify-between">
-                        <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-                          <LucideByName name={c.icon} className="h-6 w-6" />
+                        <span
+                          className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5"
+                          style={accent ? { color: accent } : undefined}
+                        >
+                          <LucideByName name={c.icon} className="h-6 w-6 text-brand-glow" />
                         </span>
                         <ArrowUpRight className="h-5 w-5 text-muted transition-colors group-hover:text-white" />
                       </div>
                     )}
-                    <h3 className={`font-display text-lg font-semibold text-white ${!isCultura ? "mt-4" : ""}`}>
+                    <h3 className={`font-display text-lg font-semibold text-white ${(!isCultura && !hasCover) ? "mt-4" : ""}`}>
                       {c.name}
                     </h3>
+                    {/* Responsable */}
+                    {c.responsible && (
+                      <p className="mt-0.5 text-xs font-medium" style={accent ? { color: accent } : { color: "#7dbfe6" }}>
+                        {c.responsible}
+                      </p>
+                    )}
                     {c.description && (
                       <p className="mt-1 line-clamp-2 text-sm text-muted">{c.description}</p>
                     )}
@@ -159,10 +188,12 @@ export function CategoryGrid({
                       ) : (
                         <>
                           <span className="chip">{counts[c.id] ?? 0} recursos</span>
-                          <span>
-                            {c.subcategories.length}{" "}
-                            {c.subcategories.length === 1 ? "departamento" : "departamentos"}
-                          </span>
+                          {c.subcategories.length > 0 && (
+                            <span>
+                              {c.subcategories.length}{" "}
+                              {c.subcategories.length === 1 ? "departamento" : "departamentos"}
+                            </span>
+                          )}
                         </>
                       )}
                     </div>

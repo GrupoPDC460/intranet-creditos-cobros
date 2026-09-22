@@ -76,6 +76,9 @@ function resourceToRow(input: Partial<ResourceInput>): Partial<ResourceRow> {
   if (input.subcategoryId !== undefined) row.subcategory_id = input.subcategoryId ?? null;
   if (input.type !== undefined) row.type = input.type;
   if (input.icon !== undefined) row.icon = input.icon ?? null;
+  if ((input as any).responsible !== undefined) (row as any).responsible = (input as any).responsible ?? null;
+  if ((input as any).cover_image !== undefined) (row as any).cover_image = (input as any).cover_image ?? null;
+  if ((input as any).accent_color !== undefined) (row as any).accent_color = (input as any).accent_color ?? null;
   if (input.imageUrl !== undefined) row.image_url = input.imageUrl ?? null;
   if (input.order !== undefined) row.order = input.order;
   if (input.active !== undefined) row.active = input.active;
@@ -126,6 +129,9 @@ export class SupabaseRepository implements Repository {
       icon: c.icon,
       order: c.order,
       active: c.active,
+      responsible: (c as any).responsible ?? null,
+      cover_image: (c as any).cover_image ?? null,
+      accent_color: (c as any).accent_color ?? null,
       subcategories: subsByCat.get(c.id) ?? [],
     }));
 

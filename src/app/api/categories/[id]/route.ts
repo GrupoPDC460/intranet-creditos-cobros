@@ -24,6 +24,9 @@ export async function PATCH(
   if ("icon" in raw) patch.icon = (raw.icon as string | null) ?? null;
   if (typeof raw.order === "number") patch.order = raw.order;
   if (typeof raw.active === "boolean") patch.active = raw.active;
+  if ("responsible" in raw) (patch as any).responsible = (raw.responsible as string | null) ?? null;
+  if ("cover_image" in raw) (patch as any).cover_image = (raw.cover_image as string | null) ?? null;
+  if ("accent_color" in raw) (patch as any).accent_color = (raw.accent_color as string | null) ?? null;
   if (Array.isArray(raw.subcategories)) {
     patch.subcategories = raw.subcategories
       .map((s, i) => {

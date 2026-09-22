@@ -42,6 +42,12 @@ export interface Category {
   icon?: string | null;
   order: number;
   active: boolean;
+  /** nombre del responsable de la carpeta */
+  responsible?: string | null;
+  /** URL de imagen de portada/fondo */
+  cover_image?: string | null;
+  /** color de acento hex, ej. "#ff5100" */
+  accent_color?: string | null;
   /** subcategorías ordenadas */
   subcategories: Subcategory[];
 }

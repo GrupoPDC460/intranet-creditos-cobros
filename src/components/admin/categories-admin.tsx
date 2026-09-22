@@ -27,6 +27,9 @@ interface Draft {
   icon: string;
   order: number;
   active: boolean;
+  responsible: string;
+  cover_image: string;
+  accent_color: string;
   subcategories: SubDraft[];
 }
 
@@ -36,6 +39,9 @@ const EMPTY: Draft = {
   icon: "folder",
   order: 0,
   active: true,
+  responsible: "",
+  cover_image: "",
+  accent_color: "",
   subcategories: [],
 };
 
@@ -83,6 +89,9 @@ export function CategoriesAdmin({
       name: c.name,
       description: c.description ?? "",
       icon: c.icon ?? "folder",
+      responsible: (c as any).responsible ?? "",
+      cover_image: (c as any).cover_image ?? "",
+      accent_color: (c as any).accent_color ?? "",
       order: c.order,
       active: c.active,
       subcategories: c.subcategories
@@ -106,6 +115,9 @@ export function CategoriesAdmin({
       icon: draft.icon.trim() || null,
       order: draft.order,
       active: draft.active,
+      responsible: draft.responsible.trim() || null,
+      cover_image: draft.cover_image.trim() || null,
+      accent_color: draft.accent_color.trim() || null,
       subcategories: draft.subcategories
         .filter((s) => s.name.trim())
         .map((s, i) => ({
@@ -292,6 +304,47 @@ export function CategoriesAdmin({
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
               placeholder="Cartera vigente y vencida"
             />
+          </div>
+          <div>
+            <label className="label">Responsable</label>
+            <input
+              className="field"
+              value={draft.responsible}
+              onChange={(e) => setDraft((d) => ({ ...d, responsible: e.target.value }))}
+              placeholder="Henry Velásquez"
+            />
+          </div>
+          <div>
+            <label className="label">Color de acento</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                className="h-9 w-14 cursor-pointer rounded-lg border border-white/10 bg-transparent p-0.5"
+                value={draft.accent_color || "#7dbfe6"}
+                onChange={(e) => setDraft((d) => ({ ...d, accent_color: e.target.value }))}
+              />
+              <input
+                className="field flex-1"
+                value={draft.accent_color}
+                onChange={(e) => setDraft((d) => ({ ...d, accent_color: e.target.value }))}
+                placeholder="#7dbfe6 (opcional)"
+              />
+            </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Imagen de portada (URL)</label>
+            <input
+              className="field"
+              value={draft.cover_image}
+              onChange={(e) => setDraft((d) => ({ ...d, cover_image: e.target.value }))}
+              placeholder="https://... (opcional)"
+            />
+            {draft.cover_image && (
+              <div className="mt-2 h-20 overflow-hidden rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={draft.cover_image} alt="" className="h-full w-full object-cover" />
+              </div>
+            )}
           </div>
           <div>
             <label className="label">Orden</label>
