@@ -13,7 +13,7 @@ import {
   Star,
   ExternalLink,
 } from "lucide-react";
-import type { Category, Resource, ResourceInput } from "@/lib/types";
+import type { Category, Resource, ResourceInput, ResourceCategory } from "@/lib/types";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { IconPicker } from "@/components/admin/icon-picker";
@@ -23,6 +23,7 @@ import { Modal, ConfirmDialog, Toggle, ReadOnlyBanner } from "@/components/admin
 interface Props {
   categories: Category[];
   resources: Resource[];
+  resourceCategories?: ResourceCategory[];
   writable: boolean;
   openNew?: boolean;
   openImport?: boolean;
@@ -34,6 +35,7 @@ const EMPTY = (categoryId: string): ResourceInput => ({
   url: "",
   categoryId,
   subcategoryId: null,
+  resourceCategoryId: null,
   type: "sistema",
   icon: null,
   imageUrl: null,
@@ -46,6 +48,7 @@ const EMPTY = (categoryId: string): ResourceInput => ({
 export function ResourcesAdmin({
   categories,
   resources,
+  resourceCategories = [],
   writable,
   openNew,
   openImport,
@@ -297,6 +300,7 @@ export function ResourcesAdmin({
       </div>
 
       <ResourceForm
+        resourceCategories={resourceCategories}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         categories={categories}
@@ -334,12 +338,14 @@ function ResourceForm({
   open,
   onClose,
   categories,
+  resourceCategories,
   editing,
   onSaved,
 }: {
   open: boolean;
   onClose: () => void;
   categories: Category[];
+  resourceCategories: ResourceCategory[];
   editing: Resource | null;
   onSaved: () => void;
 }) {
@@ -360,6 +366,7 @@ function ResourceForm({
         url: editing.url,
         categoryId: editing.categoryId,
         subcategoryId: editing.subcategoryId ?? null,
+        resourceCategoryId: editing.resourceCategoryId ?? null,
         type: editing.type,
         icon: editing.icon ?? null,
         imageUrl: editing.imageUrl ?? null,
@@ -376,6 +383,10 @@ function ResourceForm({
 
   const subcategories =
     categories.find((c) => c.id === form.categoryId)?.subcategories ?? [];
+  // Categorías de recurso del departamento seleccionado
+  const deptResourceCats = resourceCategories
+    .filter((rc) => rc.subcategoryId === form.subcategoryId)
+    .sort((a, b) => a.order - b.order);
 
   function set<K extends keyof ResourceInput>(key: K, value: ResourceInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -456,7 +467,7 @@ function ResourceForm({
           <select
             className="field"
             value={form.subcategoryId ?? ""}
-            onChange={(e) => set("subcategoryId", e.target.value || null)}
+            onChange={(e) => { set("subcategoryId", e.target.value || null); set("resourceCategoryId" as any, null); }}
           >
             <option value="">— Ninguno —</option>
             {subcategories.map((s) => (
@@ -466,6 +477,21 @@ function ResourceForm({
             ))}
           </select>
         </div>
+        {form.subcategoryId && deptResourceCats.length > 0 && (
+          <div>
+            <label className="label">Categoría</label>
+            <select
+              className="field"
+              value={(form as any).resourceCategoryId ?? ""}
+              onChange={(e) => set("resourceCategoryId" as any, e.target.value || null)}
+            >
+              <option value="">— Sin categoría (recurso directo) —</option>
+              {deptResourceCats.map((rc) => (
+                <option key={rc.id} value={rc.id}>{rc.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="label">Tipo</label>
           <select

@@ -10,7 +10,9 @@ export default async function AdminResourcesPage({
   searchParams: { nuevo?: string; importar?: string };
 }) {
   const repo = getRepository();
-  const { categories, resources } = await repo.getAll();
+  const data = await repo.getAll();
+  const { categories, resources } = data;
+  const resourceCategories = data.resourceCategories ?? [];
   const sorted = resources
     .slice()
     .sort((a, b) => a.categoryId.localeCompare(b.categoryId) || a.order - b.order);
@@ -20,6 +22,7 @@ export default async function AdminResourcesPage({
       categories={categories.sort((a, b) => a.order - b.order)}
       resources={sorted}
       writable={repo.writable}
+      resourceCategories={resourceCategories}
       openNew={searchParams.nuevo === "1"}
       openImport={searchParams.importar === "1"}
     />

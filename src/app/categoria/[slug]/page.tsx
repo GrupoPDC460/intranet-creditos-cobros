@@ -66,17 +66,15 @@ export default async function CategoryPage({
   return (
     <SiteShell data={{ categories: view.categories, resources: view.resources }}>
       <div className="pt-10">
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Inicio
-        </Link>
+        <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted" aria-label="Ruta">
+          <Link href="/" className="transition-colors hover:text-white">Inicio</Link>
+          <span className="text-muted/50">/</span>
+          <span className="text-white">{category.name}</span>
+        </nav>
 
         <Reveal>
           <p className="mb-1.5 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-brand-glow">
-            Categoría
+            Carpeta
           </p>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             {category.name}
