@@ -176,3 +176,20 @@ export async function moveAlbumInto(albumId: string, newParentId: string | null)
     .eq("id", albumId);
   if (error) throw new Error(error.message);
 }
+
+/** Sube una imagen al bucket "categoria-covers" y devuelve su URL pública. */
+export async function uploadCoverImage(
+  file: { name: string; type: string; bytes: ArrayBuffer },
+): Promise<string> {
+  const client = db();
+  // Reusar el bucket cultura pero en carpeta separada
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const rand = Math.random().toString(36).slice(2, 10);
+  const path = `covers/${Date.now()}_${rand}.${ext}`;
+  const { error } = await client.storage
+    .from("cultura")
+    .upload(path, file.bytes, { contentType: file.type, upsert: false });
+  if (error) throw new Error(error.message);
+  const { data } = client.storage.from("cultura").getPublicUrl(path);
+  return data.publicUrl;
+}

@@ -7,6 +7,7 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  Upload,
   GripVertical,
   X,
   ChevronUp,
@@ -100,6 +101,23 @@ export function CategoriesAdmin({
         .map((s) => ({ id: s.id, name: s.name })),
     });
     setFormOpen(true);
+  }
+
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  async function uploadCover(file: File) {
+    setUploadingCover(true);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const res = await fetch("/api/upload-cover", { method: "POST", body: fd });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        setDraft((d) => ({ ...d, cover_image: data.url! }));
+        toast("Imagen subida", "success");
+      } else {
+        toast(data.error ?? "No se pudo subir.", "error");
+      }
+    } finally { setUploadingCover(false); }
   }
 
   async function save() {
@@ -332,17 +350,38 @@ export function CategoriesAdmin({
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="label">Imagen de portada (URL)</label>
+            <label className="label">Imagen de portada</label>
+            {/* Subir desde PC */}
+            <label className={`mb-2 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 px-4 py-3 text-sm text-muted transition-colors hover:border-brand-glow/50 hover:text-white ${uploadingCover ? "pointer-events-none opacity-60" : ""}`}>
+              {uploadingCover
+                ? <><Loader2 className="h-4 w-4 animate-spin text-brand-glow" /> Subiendo…</>
+                : <><Upload className="h-4 w-4 text-brand-glow" /> Subir desde tu computadora</>
+              }
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(f); }}
+              />
+            </label>
+            {/* O pegar URL */}
             <input
               className="field"
               value={draft.cover_image}
               onChange={(e) => setDraft((d) => ({ ...d, cover_image: e.target.value }))}
-              placeholder="https://... (opcional)"
+              placeholder="O pega una URL de imagen (https://...)"
             />
             {draft.cover_image && (
-              <div className="mt-2 h-20 overflow-hidden rounded-xl">
+              <div className="relative mt-2 h-24 overflow-hidden rounded-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={draft.cover_image} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setDraft((d) => ({ ...d, cover_image: "" }))}
+                  className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white hover:bg-rose-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
             )}
           </div>

@@ -28,8 +28,33 @@ export default async function CategoryPage({
   params: { slug: string };
 }) {
   const view = await getPublicView();
-  const category = view.categories.find((c) => c.slug === params.slug);
-  if (!category) notFound();
+  let category = view.categories.find((c) => c.slug === params.slug);
+
+  // Si no existe como categoría activa, redirigir a la carpeta padre
+  if (!category) {
+    const { redirect } = await import("next/navigation");
+    // Mapa de slugs viejos/departamentos a su carpeta padre activa
+    const SLUG_MAP: Record<string, string> = {
+      "cobros-venta-directa":  "cobros",
+      "cobros-moderno":        "cobros",
+      "cobros-kam":            "cobros",
+      "cobros-glt-servicios":  "cobros",
+      "cobros-distribuidores": "cobros",
+      "operaciones-cartera":   "creditos",
+      "operatoria-cartera":    "creditos",
+      "creditos-dept":         "creditos",
+      "politicas-y-procedimientos": "politicas-procedimientos",
+    };
+    const target = SLUG_MAP[params.slug];
+    if (target) redirect(`/categoria/${target}`);
+    // Buscar si es slug de subcategoría → redirigir al padre
+    const allCats = view.categories;
+    for (const cat of allCats) {
+      const sub = cat.subcategories.find((s) => s.slug === params.slug);
+      if (sub) redirect(`/categoria/${cat.slug}`);
+    }
+    notFound();
+  }
 
   const resources = view.resources.filter((r) => r.categoryId === category.id);
   const isCultura = category.slug === "cultura";
