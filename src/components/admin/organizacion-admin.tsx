@@ -16,12 +16,14 @@ function Ico({ name, className }: { name?: string | null; className?: string }) 
 interface Dept { id: string; name: string; icon: string | null; responsible: string | null; cover_image: string | null; count: number; }
 interface Cat { id: string; name: string; icon: string | null; subcategories: Dept[]; }
 interface RC { id: string; name: string; icon: string | null; subcategoryId: string | null; categoryId: string | null; order: number; count: number; }
+interface Res { id: string; name: string; type: string; subcategoryId: string | null; resourceCategoryId: string | null; }
 
 export function OrganizacionAdmin({
-  categories, resourceCategories,
+  categories, resourceCategories, resources,
 }: {
   categories: Cat[];
   resourceCategories: RC[];
+  resources: Res[];
 }) {
   const { toast } = useToast();
   const [folder, setFolder] = useState<Cat | null>(null);
@@ -29,6 +31,7 @@ export function OrganizacionAdmin({
   const [rcs, setRcs] = useState<RC[]>(resourceCategories);
   const [busy, setBusy] = useState(false);
   const [uploadingCover, setUploadingCover] = useState<string | null>(null);
+  const [assignCat, setAssignCat] = useState<RC | null>(null);
 
   function reload() { setTimeout(() => window.location.assign("/admin/organizacion"), 400); }
 
@@ -105,6 +108,22 @@ export function OrganizacionAdmin({
     else toast("No se pudo eliminar.", "error");
   }
 
+  async function toggleResourceInCat(res: Res, rc: RC) {
+    const isIn = res.resourceCategoryId === rc.id;
+    const newVal = isIn ? null : rc.id;
+    const r = await fetch(`/api/resources/assign-category`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resourceIds: [res.id], resourceCategoryId: newVal }),
+    });
+    if (r.ok) {
+      // Actualizar en memoria
+      res.resourceCategoryId = newVal;
+      setAssignCat({ ...rc });
+    } else {
+      toast("No se pudo asignar.", "error");
+    }
+  }
+
   async function moveRC(idx: number, dir: -1 | 1) {
     const arr = [...deptRCs];
     const sw = idx + dir;
@@ -154,6 +173,7 @@ export function OrganizacionAdmin({
                     <button onClick={() => moveRC(i, 1)} disabled={i === deptRCs.length - 1} className="text-muted hover:text-white disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
                   </div>
                   <button onClick={() => changeIconRC(rc)} className="btn btn-ghost px-2 py-1.5" title="Ícono"><Ico name={rc.icon} className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => setAssignCat(rc)} className="btn btn-ghost px-2 py-1.5" title="Asignar recursos"><Icons.ListPlus className="h-3.5 w-3.5" /></button>
                   <button onClick={() => renameRC(rc)} className="btn btn-ghost px-2 py-1.5" title="Renombrar"><Pencil className="h-3.5 w-3.5" /></button>
                   <button onClick={() => delRC(rc)} className="btn btn-danger px-2 py-1.5" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
@@ -161,11 +181,52 @@ export function OrganizacionAdmin({
             ))}
           </ul>
         )}
+
+        {/* Modal: asignar recursos a la categoría */}
+        {assignCat && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4">
+            <div className="glass-strong flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl shadow-glass-lg overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-white">Recursos en “{assignCat.name}”</h3>
+                  <p className="text-xs text-muted">Marca los recursos que pertenecen a esta categoría</p>
+                </div>
+                <button onClick={() => { setAssignCat(null); reload(); }} className="grid h-8 w-8 place-items-center rounded-lg bg-white/5 text-muted hover:text-white"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="flex-1 space-y-1.5 overflow-y-auto p-4">
+                {resources.filter((r) => r.subcategoryId === dept.id).length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted">Este departamento no tiene recursos aún.</p>
+                ) : (
+                  resources.filter((r) => r.subcategoryId === dept.id).map((res) => {
+                    const isIn = res.resourceCategoryId === assignCat.id;
+                    const inOther = res.resourceCategoryId && res.resourceCategoryId !== assignCat.id;
+                    return (
+                      <button
+                        key={res.id}
+                        onClick={() => toggleResourceInCat(res, assignCat)}
+                        className={`flex w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-colors ${
+                          isIn ? "border-brand-400 bg-brand-500/15 text-white" : "border-white/10 bg-white/5 text-muted hover:text-white"
+                        }`}
+                      >
+                        <span className={`grid h-5 w-5 shrink-0 place-items-center rounded border-2 ${isIn ? "border-brand-400 bg-brand-500 text-white" : "border-white/30"}`}>
+                          {isIn && <svg className="h-3 w-3" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        <span className="flex-1 truncate">{res.name}</span>
+                        {inOther && <span className="rounded bg-white/10 px-1.5 py-0.5 text-[0.65rem] text-muted">en otra categoría</span>}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <div className="border-t border-white/10 p-4">
+                <button onClick={() => { setAssignCat(null); reload(); }} className="btn btn-primary w-full">Listo</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
-
-  // ── Vista: departamentos de una carpeta ──
   if (folder) {
     return (
       <div>

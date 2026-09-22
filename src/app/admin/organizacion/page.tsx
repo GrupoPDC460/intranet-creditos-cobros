@@ -41,6 +41,13 @@ export default async function OrganizacionPage() {
         order: rc.order,
         count: countByRC[rc.id] ?? 0,
       }))}
+      resources={data.resources.map((r) => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        subcategoryId: r.subcategoryId ?? null,
+        resourceCategoryId: r.resourceCategoryId ?? null,
+      }))}
     />
   );
 }
