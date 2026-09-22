@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import * as Icons from "lucide-react";
 import { ChevronLeft, Folder, PackageOpen, Star, LayoutGrid } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
-import type { Category, Resource, ResourceType } from "@/lib/types";
+import type { Category, Resource, ResourceType, ResourceCategory } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
 import { ResourceCard } from "@/components/resource-card";
 import { Reveal, EmptyState } from "@/components/ui";
@@ -18,9 +18,11 @@ function LucideByName({ name, className }: { name?: string | null; className?: s
 export function CategoryBrowser({
   category,
   resources,
+  resourceCategories = [],
 }: {
   category: Category;
   resources: Resource[];
+  resourceCategories?: ResourceCategory[];
 }) {
   const [openDept, setOpenDept] = useState<string | null>(null);
   const [type, setType] = useState<ResourceType | "all">("all");
@@ -108,22 +110,10 @@ export function CategoryBrowser({
             description="Agrega recursos desde el panel de administración."
           />
         ) : (
-          <>
-            <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
-              <FilterChip active={type === "all"} onClick={() => setType("all")} label="Todos" count={current.items.length} />
-              {presentTypes.map(({ type: t, count }) => {
-                const Icon = typeIcon(t);
-                return (
-                  <FilterChip
-                    key={t} active={type === t} onClick={() => setType(t)}
-                    label={RESOURCE_TYPE_LABELS[t]} count={count}
-                    icon={<Icon className="h-3.5 w-3.5" style={{ color: TYPE_TINT[t] }} />}
-                  />
-                );
-              })}
-            </div>
-            <TypeBreakdown items={filtered} />
-          </>
+          <CategoryGroupedView
+            items={current.items}
+            resourceCategories={resourceCategories.filter((rc) => rc.subcategoryId === current!.id)}
+          />
         )}
       </div>
     );
@@ -347,5 +337,95 @@ function FilterChip({
         {count}
       </span>
     </button>
+  );
+}
+
+// ── Vista agrupada por categorías reales (híbrido: tarjetas + secciones) ──
+function CategoryGroupedView({
+  items,
+  resourceCategories,
+}: {
+  items: Resource[];
+  resourceCategories: ResourceCategory[];
+}) {
+  const [jump, setJump] = useState<string | null>(null);
+
+  // Ordenar categorías presentes por su orden definido
+  const cats = resourceCategories
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((rc) => ({ rc, items: items.filter((r) => r.resourceCategoryId === rc.id) }))
+    .filter((g) => g.items.length > 0);
+
+  // Recursos sin categoría (directos del departamento) → como "Cobro Jabón"
+  const uncategorized = items.filter(
+    (r) => !r.resourceCategoryId || !resourceCategories.some((rc) => rc.id === r.resourceCategoryId),
+  );
+
+  const showCards = cats.length >= 3;
+
+  const visibleCats = jump ? cats.filter((g) => g.rc.id === jump) : cats;
+
+  return (
+    <div>
+      {/* Tarjetas de acceso rápido a categorías (solo si hay 3+) */}
+      {showCards && (
+        <div className="mb-8 flex flex-wrap gap-2">
+          <button
+            onClick={() => setJump(null)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+              !jump ? "border-brand-glow/50 bg-brand-glow/10 text-white" : "border-white/10 bg-white/5 text-muted hover:text-white"
+            }`}
+          >
+            Todas <span className="text-xs opacity-60">{items.length}</span>
+          </button>
+          {cats.map(({ rc, items: gi }) => (
+            <button
+              key={rc.id}
+              onClick={() => setJump(jump === rc.id ? null : rc.id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                jump === rc.id ? "border-brand-glow/50 bg-brand-glow/10 text-white" : "border-white/10 bg-white/5 text-muted hover:text-white"
+              }`}
+            >
+              <LucideByName name={rc.icon} className="h-3.5 w-3.5 text-brand-glow" />
+              {rc.name} <span className="text-xs opacity-60">{gi.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Recursos directos (sin categoría) primero */}
+      {uncategorized.length > 0 && !jump && (
+        <section className="mb-8">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {uncategorized.map((r, i) => (
+              <Reveal key={r.id} index={i}>
+                <ResourceCard resource={r} index={i} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Secciones por categoría */}
+      <div className="space-y-9">
+        {visibleCats.map(({ rc, items: gi }) => (
+          <section key={rc.id}>
+            <div className="mb-3 flex items-center gap-2">
+              <LucideByName name={rc.icon} className="h-4 w-4 text-brand-glow" />
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-white">{rc.name}</h3>
+              <span className="chip">{gi.length}</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {gi.map((r, i) => (
+                <Reveal key={r.id} index={i}>
+                  <ResourceCard resource={r} index={i} />
+                </Reveal>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }

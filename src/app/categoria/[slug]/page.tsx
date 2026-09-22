@@ -97,7 +97,7 @@ export default async function CategoryPage({
             description="El administrador puede agregar recursos desde el panel."
           />
         ) : (
-          <CategoryBrowser category={category} resources={resources} />
+          <CategoryBrowser category={category} resources={resources} resourceCategories={view.resourceCategories} />
         )}
       </div>
     </SiteShell>

@@ -39,6 +39,7 @@ interface ResourceRow {
   url: string;
   category_id: string;
   subcategory_id: string | null;
+  resource_category_id: string | null;
   type: string;
   icon: string | null;
   image_url: string | null;
@@ -58,6 +59,7 @@ function toResource(r: ResourceRow): Resource {
     url: r.url,
     categoryId: r.category_id,
     subcategoryId: r.subcategory_id,
+    resourceCategoryId: r.resource_category_id ?? null,
     type: r.type as ResourceType,
     icon: r.icon,
     imageUrl: r.image_url,
@@ -77,6 +79,7 @@ function resourceToRow(input: Partial<ResourceInput>): Partial<ResourceRow> {
   if (input.url !== undefined) row.url = input.url;
   if (input.categoryId !== undefined) row.category_id = input.categoryId;
   if (input.subcategoryId !== undefined) row.subcategory_id = input.subcategoryId ?? null;
+  if ((input as any).resourceCategoryId !== undefined) (row as any).resource_category_id = (input as any).resourceCategoryId ?? null;
   if (input.type !== undefined) row.type = input.type;
   if (input.icon !== undefined) row.icon = input.icon ?? null;
   if ((input as any).responsible !== undefined) (row as any).responsible = (input as any).responsible ?? null;
@@ -107,10 +110,11 @@ export class SupabaseRepository implements Repository {
   }
 
   async getAll(): Promise<IntranetData> {
-    const [cats, subs, res] = await Promise.all([
+    const [cats, subs, res, reccats] = await Promise.all([
       this.db.from("categories").select("*").order("order", { ascending: true }),
       this.db.from("subcategories").select("*").order("order", { ascending: true }),
       this.db.from("resources").select("*").order("order", { ascending: true }),
+      this.db.from("resource_categories").select("*").order("order", { ascending: true }),
     ]);
 
     if (cats.error) throw cats.error;
@@ -139,7 +143,18 @@ export class SupabaseRepository implements Repository {
     }));
 
     const resources = ((res.data as ResourceRow[]) ?? []).map(toResource);
-    return { categories, resources };
+    const resourceCategories = ((reccats.data as any[]) ?? []).map((rc) => ({
+      id: rc.id,
+      name: rc.name,
+      slug: rc.slug,
+      icon: rc.icon ?? null,
+      description: rc.description ?? null,
+      categoryId: rc.category_id ?? null,
+      subcategoryId: rc.subcategory_id ?? null,
+      order: rc.order ?? 0,
+      active: rc.active ?? true,
+    }));
+    return { categories, resources, resourceCategories };
   }
 
   async createResource(input: ResourceInput): Promise<Resource> {

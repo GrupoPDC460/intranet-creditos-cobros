@@ -62,6 +62,18 @@ export interface Subcategory {
   icon?: string | null;
 }
 
+export interface ResourceCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  description?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  order: number;
+  active: boolean;
+}
+
 export interface Resource {
   id: string;
   name: string;
@@ -69,6 +81,7 @@ export interface Resource {
   url: string;
   categoryId: string;
   subcategoryId?: string | null;
+  resourceCategoryId?: string | null;
   type: ResourceType;
   /** icono Lucide opcional que sobreescribe el icono por tipo */
   icon?: string | null;
@@ -90,4 +103,5 @@ export type CategoryInput = Omit<Category, "id" | "subcategories"> & {
 export interface IntranetData {
   categories: Category[];
   resources: Resource[];
+  resourceCategories?: ResourceCategory[];
 }
