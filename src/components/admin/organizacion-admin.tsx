@@ -3,7 +3,7 @@
 import { useState } from "react";
 import * as Icons from "lucide-react";
 import {
-  ChevronLeft, ChevronRight, Folder, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Loader2,
+  ChevronLeft, ChevronRight, Folder, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Loader2, ImagePlus, X,
 } from "lucide-react";
 import { useToast } from "@/components/providers";
 
@@ -13,7 +13,7 @@ function Ico({ name, className }: { name?: string | null; className?: string }) 
   return <C className={className} />;
 }
 
-interface Dept { id: string; name: string; icon: string | null; responsible: string | null; count: number; }
+interface Dept { id: string; name: string; icon: string | null; responsible: string | null; cover_image: string | null; count: number; }
 interface Cat { id: string; name: string; icon: string | null; subcategories: Dept[]; }
 interface RC { id: string; name: string; icon: string | null; subcategoryId: string | null; categoryId: string | null; order: number; count: number; }
 
@@ -28,8 +28,34 @@ export function OrganizacionAdmin({
   const [dept, setDept] = useState<Dept | null>(null);
   const [rcs, setRcs] = useState<RC[]>(resourceCategories);
   const [busy, setBusy] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState<string | null>(null);
 
   function reload() { setTimeout(() => window.location.assign("/admin/organizacion"), 400); }
+
+  async function uploadDeptCover(subId: string, file: File) {
+    setUploadingCover(subId);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const up = await fetch("/api/upload-cover", { method: "POST", body: fd });
+      const data = (await up.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!up.ok || !data.url) { toast(data.error ?? "No se pudo subir.", "error"); return; }
+      const res = await fetch(`/api/subcategories/${subId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cover_image: data.url }),
+      });
+      if (res.ok) { toast("Portada actualizada", "success"); reload(); }
+      else toast("No se pudo guardar.", "error");
+    } finally { setUploadingCover(null); }
+  }
+
+  async function removeDeptCover(subId: string) {
+    if (!window.confirm("¿Quitar la portada de este departamento?")) return;
+    const res = await fetch(`/api/subcategories/${subId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cover_image: null }),
+    });
+    if (res.ok) reload();
+  }
 
   // Categorías de recursos del departamento actual
   const deptRCs = dept
@@ -155,17 +181,45 @@ export function OrganizacionAdmin({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {folder.subcategories.map((s) => (
-              <button key={s.id} onClick={() => setDept(s)} className="glass sheen group flex items-center gap-3 rounded-2xl p-4 text-left transition-transform hover:-translate-y-1">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-                  <Ico name={s.icon} className="h-5 w-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-white">{s.name}</p>
-                  {s.responsible && <p className="text-xs text-brand-glow">{s.responsible}</p>}
-                  <p className="text-xs text-muted">{s.count} recursos · {rcs.filter(r => r.subcategoryId === s.id).length} categorías</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted transition-colors group-hover:text-white" />
-              </button>
+              <div key={s.id} className="glass sheen group relative overflow-hidden rounded-2xl transition-transform hover:-translate-y-1">
+                {/* Portada del departamento */}
+                {s.cover_image && (
+                  <div className="relative h-24 w-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.cover_image} alt="" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  </div>
+                )}
+                {/* Ícono para subir/cambiar portada — esquina superior derecha */}
+                <label
+                  className="absolute right-2 top-2 z-10 grid h-8 w-8 cursor-pointer place-items-center rounded-lg bg-black/50 text-white transition-colors hover:bg-brand-glow hover:text-ink"
+                  title={s.cover_image ? "Cambiar portada" : "Subir portada"}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {uploadingCover === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDeptCover(s.id, f); }} />
+                </label>
+                {s.cover_image && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeDeptCover(s.id); }}
+                    className="absolute right-11 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg bg-black/50 text-white hover:bg-rose-600"
+                    title="Quitar portada"
+                  ><X className="h-4 w-4" /></button>
+                )}
+                {/* Cuerpo clickeable para entrar al departamento */}
+                <button onClick={() => setDept(s)} className="flex w-full items-center gap-3 p-4 text-left">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+                    <Ico name={s.icon} className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-white">{s.name}</p>
+                    {s.responsible && <p className="text-xs text-brand-glow">{s.responsible}</p>}
+                    <p className="text-xs text-muted">{s.count} recursos · {rcs.filter(r => r.subcategoryId === s.id).length} categorías</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted transition-colors group-hover:text-white" />
+                </button>
+              </div>
             ))}
           </div>
         )}

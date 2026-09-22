@@ -50,6 +50,7 @@ export function CategoryBrowser({
           description: sub.description ?? null,
           responsible: sub.responsible ?? null,
           icon: sub.icon ?? null,
+          cover_image: sub.cover_image ?? null,
           items: resources.filter((r) => r.subcategoryId === sub.id),
         })),
     [category.subcategories, resources],
@@ -166,6 +167,7 @@ export function CategoryBrowser({
                   description={d.description}
                   responsible={d.responsible}
                   icon={d.icon}
+                  cover={d.cover_image}
                   items={d.items}
                   onClick={() => setOpenDept(d.id)}
                 />
@@ -227,12 +229,13 @@ function DirectResourcesView({ resources }: { resources: Resource[] }) {
 
 // ── Tarjeta de departamento ───────────────────────────────────
 function DeptFolder({
-  name, description, responsible, icon, items, onClick,
+  name, description, responsible, icon, cover, items, onClick,
 }: {
   name: string;
   description?: string | null;
   responsible?: string | null;
   icon?: string | null;
+  cover?: string | null;
   items: Resource[];
   onClick: () => void;
 }) {
@@ -242,15 +245,28 @@ function DeptFolder({
   return (
     <button
       onClick={onClick}
-      className="glass sheen group flex h-full w-full flex-col rounded-2xl p-5 text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
+      className="glass sheen group flex h-full w-full flex-col overflow-hidden rounded-2xl text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
     >
+      {cover && (
+        <div className="relative h-28 w-full overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cover} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+          <span className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-lg border border-white/20 bg-black/30 text-white backdrop-blur">
+            <LucideByName name={icon} className="h-5 w-5" />
+          </span>
+        </div>
+      )}
+      <div className="flex flex-1 flex-col p-5">
       <div className="relative z-[2] flex items-start justify-between">
-        <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-          <LucideByName name={icon} className="h-6 w-6" />
-        </span>
-        <span className="chip">{items.length} {items.length === 1 ? "recurso" : "recursos"}</span>
+        {!cover && (
+          <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+            <LucideByName name={icon} className="h-6 w-6" />
+          </span>
+        )}
+        <span className="chip ml-auto">{items.length} {items.length === 1 ? "recurso" : "recursos"}</span>
       </div>
-      <h3 className="relative z-[2] mt-4 font-display text-lg font-semibold text-white">
+      <h3 className={`relative z-[2] font-display text-lg font-semibold text-white ${cover ? "mt-3" : "mt-4"}`}>
         {name}
       </h3>
       {responsible && (
@@ -274,6 +290,7 @@ function DeptFolder({
           })}
         </div>
       )}
+      </div>
     </button>
   );
 }

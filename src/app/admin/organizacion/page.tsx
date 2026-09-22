@@ -28,6 +28,7 @@ export default async function OrganizacionPage() {
           name: s.name,
           icon: s.icon ?? null,
           responsible: s.responsible ?? null,
+          cover_image: s.cover_image ?? null,
           count: countBySub[s.id] ?? 0,
         })),
       }))}
