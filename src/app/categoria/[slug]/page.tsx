@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, PackageOpen } from "lucide-react";
 import { getPublicView } from "@/lib/data/public";
@@ -53,8 +53,10 @@ export default async function CategoryPage({
       const sub = cat.subcategories.find((s) => s.slug === params.slug);
       if (sub) redirect(`/categoria/${cat.slug}`);
     }
-    notFound();
+    // Último recurso: nunca mostrar "Página no encontrada" → ir al inicio
+    redirect("/");
   }
+  if (!category) redirect("/");
 
   const resources = view.resources.filter((r) => r.categoryId === category.id);
   const isCultura = category.slug === "cultura";

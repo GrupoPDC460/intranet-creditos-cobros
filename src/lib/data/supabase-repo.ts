@@ -208,6 +208,9 @@ export class SupabaseRepository implements Repository {
     if (patch.icon !== undefined) catPatch.icon = patch.icon ?? null;
     if (patch.order !== undefined) catPatch.order = patch.order;
     if (patch.active !== undefined) catPatch.active = patch.active;
+    if ((patch as any).responsible !== undefined) catPatch.responsible = (patch as any).responsible ?? null;
+    if ((patch as any).cover_image !== undefined) catPatch.cover_image = (patch as any).cover_image ?? null;
+    if ((patch as any).accent_color !== undefined) catPatch.accent_color = (patch as any).accent_color ?? null;
 
     if (Object.keys(catPatch).length) {
       const { error } = await this.db.from("categories").update(catPatch).eq("id", id);
@@ -217,16 +220,22 @@ export class SupabaseRepository implements Repository {
     // Sincronización de departamentos (subcategorías) SIN desvincular recursos:
     // se actualizan/crean los que llegan y se borran solo los que el usuario quitó.
     if (patch.subcategories !== undefined) {
-      const incoming = patch.subcategories.map((s, i) => ({
-        id: s.id ?? uid("sub"),
-        category_id: id,
-        name: s.name,
-        slug: s.slug,
-        order: s.order ?? i + 1,
-      }));
-      const incomingIds = incoming.map((s) => s.id);
+      const incoming = patch.subcategories.map((s, i) => {
+        const row: Record<string, unknown> = {
+          id: s.id ?? uid("sub"),
+          category_id: id,
+          name: s.name,
+          slug: s.slug,
+          order: s.order ?? i + 1,
+        };
+        // Preservar/actualizar campos extra del departamento si vienen
+        if ((s as any).description !== undefined) row.description = (s as any).description ?? null;
+        if ((s as any).responsible !== undefined) row.responsible = (s as any).responsible ?? null;
+        if ((s as any).icon !== undefined) row.icon = (s as any).icon ?? null;
+        return row;
+      });
+      const incomingIds = incoming.map((s) => s.id as string);
 
-      // 1) Borrar únicamente los departamentos que ya no están en la lista.
       const { data: existing, error: exErr } = await this.db
         .from("subcategories")
         .select("id")
@@ -243,7 +252,6 @@ export class SupabaseRepository implements Repository {
         if (delErr) throw delErr;
       }
 
-      // 2) Crear los nuevos y actualizar nombre/orden de los existentes (upsert por id).
       if (incoming.length) {
         const { error: upErr } = await this.db
           .from("subcategories")

@@ -178,11 +178,25 @@ export function CategoriesAdmin({
   }
 
   async function move(cat: Category, dir: -1 | 1) {
-    await fetch(`/api/categories/${cat.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: cat.order + dir }),
-    });
+    // Ordenar las carpetas por su orden actual y encontrar la vecina para intercambiar
+    const sorted = [...categories].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((c) => c.id === cat.id);
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const neighbor = sorted[swapIdx];
+    // Intercambiar los valores de orden entre ambas
+    await Promise.all([
+      fetch(`/api/categories/${cat.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: neighbor.order }),
+      }),
+      fetch(`/api/categories/${neighbor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: cat.order }),
+      }),
+    ]);
     reloadFresh();
   }
 
