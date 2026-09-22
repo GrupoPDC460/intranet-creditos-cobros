@@ -38,6 +38,8 @@ export function validateResourceInput(raw: unknown): ValidationResult {
     categoryId,
     subcategoryId:
       typeof data.subcategoryId === "string" && data.subcategoryId ? data.subcategoryId : null,
+    resourceCategoryId:
+      typeof data.resourceCategoryId === "string" && data.resourceCategoryId ? data.resourceCategoryId : null,
     type,
     icon: typeof data.icon === "string" && data.icon.trim() ? data.icon.trim() : null,
     imageUrl:

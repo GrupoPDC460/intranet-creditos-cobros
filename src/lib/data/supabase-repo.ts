@@ -31,6 +31,7 @@ interface SubcategoryRow {
   description?: string | null;
   responsible?: string | null;
   icon?: string | null;
+  cover_image?: string | null;
 }
 interface ResourceRow {
   id: string;
@@ -124,7 +125,7 @@ export class SupabaseRepository implements Repository {
     const subsByCat = new Map<string, Subcategory[]>();
     for (const s of (subs.data as SubcategoryRow[]) ?? []) {
       const list = subsByCat.get(s.category_id) ?? [];
-      list.push({ id: s.id, name: s.name, slug: s.slug, order: s.order, description: s.description ?? null, responsible: s.responsible ?? null, icon: s.icon ?? null });
+      list.push({ id: s.id, name: s.name, slug: s.slug, order: s.order, description: s.description ?? null, responsible: s.responsible ?? null, icon: s.icon ?? null, cover_image: s.cover_image ?? null });
       subsByCat.set(s.category_id, list);
     }
 
@@ -247,6 +248,7 @@ export class SupabaseRepository implements Repository {
         if ((s as any).description !== undefined) row.description = (s as any).description ?? null;
         if ((s as any).responsible !== undefined) row.responsible = (s as any).responsible ?? null;
         if ((s as any).icon !== undefined) row.icon = (s as any).icon ?? null;
+        if ((s as any).cover_image !== undefined) row.cover_image = (s as any).cover_image ?? null;
         return row;
       });
       const incomingIds = incoming.map((s) => s.id as string);
@@ -313,6 +315,7 @@ export class SupabaseRepository implements Repository {
         description: s.description ?? null,
         responsible: s.responsible ?? null,
         icon: s.icon ?? null,
+        cover_image: (s as any).cover_image ?? null,
       })),
     };
   }

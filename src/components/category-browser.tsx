@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import * as Icons from "lucide-react";
-import { ChevronLeft, Folder, PackageOpen, Star, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, Folder, PackageOpen, Star, LayoutGrid } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import type { Category, Resource, ResourceType, ResourceCategory } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
@@ -83,13 +83,16 @@ export function CategoryBrowser({
 
     return (
       <div>
-        <button
-          onClick={() => { setOpenDept(null); setType("all"); }}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          {category.name}
-        </button>
+        {/* Breadcrumbs */}
+        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm">
+          <a href="/" className="text-muted transition-colors hover:text-white">Inicio</a>
+          <ChevronRight className="h-3.5 w-3.5 text-muted/50" />
+          <button onClick={() => { setOpenDept(null); setType("all"); }} className="text-muted transition-colors hover:text-white">
+            {category.name}
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-muted/50" />
+          <span className="font-medium text-white">{current.name}</span>
+        </nav>
 
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
@@ -124,6 +127,13 @@ export function CategoryBrowser({
 
   return (
     <div>
+      {/* Breadcrumbs */}
+      <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm">
+        <a href="/" className="text-muted transition-colors hover:text-white">Inicio</a>
+        <ChevronRight className="h-3.5 w-3.5 text-muted/50" />
+        <span className="font-medium text-white">{category.name}</span>
+      </nav>
+
       {/* Accesos rápidos */}
       {featured.length > 0 && (
         <section className="mb-10">

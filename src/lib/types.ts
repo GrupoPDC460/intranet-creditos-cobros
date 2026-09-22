@@ -60,6 +60,7 @@ export interface Subcategory {
   description?: string | null;
   responsible?: string | null;
   icon?: string | null;
+  cover_image?: string | null;
 }
 
 export interface ResourceCategory {
