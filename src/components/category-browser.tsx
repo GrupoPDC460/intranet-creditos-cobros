@@ -1,12 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import * as Icons from "lucide-react";
 import { ChevronLeft, Folder, PackageOpen, Star, LayoutGrid } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import type { Category, Resource, ResourceType } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
 import { ResourceCard } from "@/components/resource-card";
 import { Reveal, EmptyState } from "@/components/ui";
+
+function LucideByName({ name, className }: { name?: string | null; className?: string }) {
+  const key = name ? name.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase()).replace(/^./, (c: string) => c.toUpperCase()) : "Folder";
+  const Cmp = (Icons as unknown as Record<string, Icons.LucideIcon>)[key] ?? Icons.Folder;
+  return <Cmp className={className} />;
+}
 
 export function CategoryBrowser({
   category,
@@ -38,6 +45,9 @@ export function CategoryBrowser({
         .map((sub) => ({
           id: sub.id,
           name: sub.name,
+          description: sub.description ?? null,
+          responsible: sub.responsible ?? null,
+          icon: sub.icon ?? null,
           items: resources.filter((r) => r.subcategoryId === sub.id),
         })),
     [category.subcategories, resources],
@@ -153,6 +163,9 @@ export function CategoryBrowser({
               <Reveal key={d.id} index={i}>
                 <DeptFolder
                   name={d.name}
+                  description={d.description}
+                  responsible={d.responsible}
+                  icon={d.icon}
                   items={d.items}
                   onClick={() => setOpenDept(d.id)}
                 />
@@ -214,9 +227,14 @@ function DirectResourcesView({ resources }: { resources: Resource[] }) {
 
 // ── Tarjeta de departamento ───────────────────────────────────
 function DeptFolder({
-  name, items, onClick,
+  name, description, responsible, icon, items, onClick,
 }: {
-  name: string; items: Resource[]; onClick: () => void;
+  name: string;
+  description?: string | null;
+  responsible?: string | null;
+  icon?: string | null;
+  items: Resource[];
+  onClick: () => void;
 }) {
   const typeCounts = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t)).map(
     (t) => ({ t, n: items.filter((r) => r.type === t).length }),
@@ -228,11 +246,21 @@ function DeptFolder({
     >
       <div className="relative z-[2] flex items-start justify-between">
         <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-          <Folder className="h-6 w-6" />
+          <LucideByName name={icon} className="h-6 w-6" />
         </span>
         <span className="chip">{items.length} {items.length === 1 ? "recurso" : "recursos"}</span>
       </div>
-      <h3 className="relative z-[2] mt-4 font-display text-lg font-semibold text-white">{name}</h3>
+      <h3 className="relative z-[2] mt-4 font-display text-lg font-semibold text-white">
+        {name}
+      </h3>
+      {responsible && (
+        <p className="relative z-[2] mt-0.5 text-xs font-medium text-brand-glow">
+          {responsible}
+        </p>
+      )}
+      {description && (
+        <p className="relative z-[2] mt-1 line-clamp-2 text-sm text-muted">{description}</p>
+      )}
       {typeCounts.length > 0 && (
         <div className="relative z-[2] mt-3 flex flex-wrap gap-1.5">
           {typeCounts.slice(0, 4).map(({ t, n }) => {

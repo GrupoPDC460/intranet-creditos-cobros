@@ -28,6 +28,9 @@ interface SubcategoryRow {
   name: string;
   slug: string;
   order: number;
+  description?: string | null;
+  responsible?: string | null;
+  icon?: string | null;
 }
 interface ResourceRow {
   id: string;
@@ -117,7 +120,7 @@ export class SupabaseRepository implements Repository {
     const subsByCat = new Map<string, Subcategory[]>();
     for (const s of (subs.data as SubcategoryRow[]) ?? []) {
       const list = subsByCat.get(s.category_id) ?? [];
-      list.push({ id: s.id, name: s.name, slug: s.slug, order: s.order });
+      list.push({ id: s.id, name: s.name, slug: s.slug, order: s.order, description: s.description ?? null, responsible: s.responsible ?? null, icon: s.icon ?? null });
       subsByCat.set(s.category_id, list);
     }
 
@@ -284,6 +287,9 @@ export class SupabaseRepository implements Repository {
         name: s.name,
         slug: s.slug,
         order: s.order,
+        description: s.description ?? null,
+        responsible: s.responsible ?? null,
+        icon: s.icon ?? null,
       })),
     };
   }

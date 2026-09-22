@@ -57,6 +57,9 @@ export interface Subcategory {
   name: string;
   slug: string;
   order: number;
+  description?: string | null;
+  responsible?: string | null;
+  icon?: string | null;
 }
 
 export interface Resource {
