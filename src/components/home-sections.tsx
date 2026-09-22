@@ -131,7 +131,7 @@ export function CategoryGrid({
                   {/* Portada: imagen personalizada o degradado de Cultura */}
                   {(isCultura || hasCover) && (
                     <div
-                      className="relative h-28 w-full overflow-hidden"
+                      className="relative h-36 w-full overflow-hidden"
                       style={
                         accent && !hasCover
                           ? { background: `linear-gradient(135deg, ${accent}33 0%, ${accent}11 100%)` }
@@ -154,8 +154,17 @@ export function CategoryGrid({
                           className="absolute left-1/2 top-1/2 h-20 w-auto -translate-x-1/2 -translate-y-1/2 object-contain opacity-90 drop-shadow-lg transition-transform duration-500 group-hover:scale-105"
                         />
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                      <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-white/60 transition-colors group-hover:text-white" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                      {/* Ícono flotante sobre la imagen */}
+                      {hasCover && (
+                        <span
+                          className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-xl border border-white/20 bg-black/30 backdrop-blur"
+                          style={accent ? { color: accent } : undefined}
+                        >
+                          <LucideByName name={c.icon} className="h-5 w-5 text-white" />
+                        </span>
+                      )}
+                      <ArrowUpRight className="absolute right-3 top-3 h-4 w-4 text-white/70 transition-colors group-hover:text-white" />
                     </div>
                   )}
                   <div className="relative z-[2] p-5">
