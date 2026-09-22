@@ -57,7 +57,7 @@ export function LoginForm({ next }: { next: string }) {
         body: JSON.stringify({ username: user, password }),
       });
       if (res.ok) {
-        router.replace(next || "/admin");
+        router.replace(next || "/");
         router.refresh();
       } else {
         const data = (await res.json().catch(() => ({}))) as { error?: string };

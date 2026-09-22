@@ -7,6 +7,6 @@ export default function LoginPage({
 }: {
   searchParams: { next?: string };
 }) {
-  const next = typeof searchParams.next === "string" ? searchParams.next : "/admin";
+  const next = typeof searchParams.next === "string" && searchParams.next !== "/admin" ? searchParams.next : "/";
   return <LoginForm next={next} />;
 }
