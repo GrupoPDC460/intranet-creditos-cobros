@@ -1,0 +1,199 @@
+"use client";
+
+import { useState } from "react";
+import * as Icons from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, Folder, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Loader2,
+} from "lucide-react";
+import { useToast } from "@/components/providers";
+
+function Ico({ name, className }: { name?: string | null; className?: string }) {
+  const key = name ? name.replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase()).replace(/^./, (c: string) => c.toUpperCase()) : "Folder";
+  const C = (Icons as unknown as Record<string, Icons.LucideIcon>)[key] ?? Icons.Folder;
+  return <C className={className} />;
+}
+
+interface Dept { id: string; name: string; icon: string | null; responsible: string | null; count: number; }
+interface Cat { id: string; name: string; icon: string | null; subcategories: Dept[]; }
+interface RC { id: string; name: string; icon: string | null; subcategoryId: string | null; categoryId: string | null; order: number; count: number; }
+
+export function OrganizacionAdmin({
+  categories, resourceCategories,
+}: {
+  categories: Cat[];
+  resourceCategories: RC[];
+}) {
+  const { toast } = useToast();
+  const [folder, setFolder] = useState<Cat | null>(null);
+  const [dept, setDept] = useState<Dept | null>(null);
+  const [rcs, setRcs] = useState<RC[]>(resourceCategories);
+  const [busy, setBusy] = useState(false);
+
+  function reload() { setTimeout(() => window.location.assign("/admin/organizacion"), 400); }
+
+  // Categorías de recursos del departamento actual
+  const deptRCs = dept
+    ? rcs.filter((r) => r.subcategoryId === dept.id).sort((a, b) => a.order - b.order)
+    : [];
+
+  async function addRC() {
+    if (!dept) return;
+    const name = window.prompt("Nombre de la categoría (ej. Sistemas, Dashboard):");
+    if (!name?.trim()) return;
+    const icon = window.prompt("Ícono (opcional, ej. monitor, cloud, bar-chart-3):", "folder") || null;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/resource-categories", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, icon, subcategoryId: dept.id, order: deptRCs.length + 1 }),
+      });
+      if (res.ok) { toast("Categoría creada", "success"); reload(); }
+      else toast("No se pudo crear.", "error");
+    } finally { setBusy(false); }
+  }
+
+  async function renameRC(rc: RC) {
+    const name = window.prompt("Nuevo nombre:", rc.name);
+    if (!name?.trim() || name === rc.name) return;
+    const res = await fetch(`/api/resource-categories/${rc.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) reload(); else toast("No se pudo renombrar.", "error");
+  }
+
+  async function changeIconRC(rc: RC) {
+    const icon = window.prompt("Ícono (ej. monitor, cloud, bar-chart-3, file-text):", rc.icon || "folder");
+    if (icon === null) return;
+    const res = await fetch(`/api/resource-categories/${rc.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ icon: icon || null }),
+    });
+    if (res.ok) reload(); else toast("No se pudo cambiar.", "error");
+  }
+
+  async function delRC(rc: RC) {
+    if (!window.confirm(`¿Eliminar la categoría "${rc.name}"? Los ${rc.count} recursos quedarán sin categoría (no se borran).`)) return;
+    const res = await fetch(`/api/resource-categories/${rc.id}`, { method: "DELETE" });
+    if (res.ok) { toast("Categoría eliminada", "success"); reload(); }
+    else toast("No se pudo eliminar.", "error");
+  }
+
+  async function moveRC(idx: number, dir: -1 | 1) {
+    const arr = [...deptRCs];
+    const sw = idx + dir;
+    if (sw < 0 || sw >= arr.length) return;
+    const a = arr[idx], b = arr[sw];
+    await Promise.all([
+      fetch(`/api/resource-categories/${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: b.order }) }),
+      fetch(`/api/resource-categories/${b.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: a.order }) }),
+    ]);
+    reload();
+  }
+
+  // ── Vista: categorías de un departamento ──
+  if (dept && folder) {
+    return (
+      <div>
+        <button onClick={() => setDept(null)} className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
+          <ChevronLeft className="h-4 w-4" /> {folder.name}
+        </button>
+        <div className="mb-2 text-xs uppercase tracking-widest text-muted">{folder.name} › Departamento</div>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h1 className="font-display text-2xl font-semibold text-white">{dept.name}</h1>
+          <button onClick={addRC} disabled={busy} className="btn btn-primary">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Nueva categoría
+          </button>
+        </div>
+        <p className="mb-4 text-sm text-muted">Ordena las categorías con las flechas. Así se muestran en el portal.</p>
+
+        {deptRCs.length === 0 ? (
+          <div className="glass rounded-2xl p-8 text-center text-muted">
+            Este departamento no tiene categorías. Sus recursos se muestran directos. Crea una con “Nueva categoría”.
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {deptRCs.map((rc, i) => (
+              <li key={rc.id} className="glass flex items-center gap-3 rounded-xl px-4 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-brand-glow">
+                  <Ico name={rc.icon} className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-white">{rc.name}</p>
+                  <p className="text-xs text-muted">{rc.count} {rc.count === 1 ? "recurso" : "recursos"}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="mr-1 flex flex-col">
+                    <button onClick={() => moveRC(i, -1)} disabled={i === 0} className="text-muted hover:text-white disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
+                    <button onClick={() => moveRC(i, 1)} disabled={i === deptRCs.length - 1} className="text-muted hover:text-white disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
+                  </div>
+                  <button onClick={() => changeIconRC(rc)} className="btn btn-ghost px-2 py-1.5" title="Ícono"><Ico name={rc.icon} className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => renameRC(rc)} className="btn btn-ghost px-2 py-1.5" title="Renombrar"><Pencil className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => delRC(rc)} className="btn btn-danger px-2 py-1.5" title="Eliminar"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  // ── Vista: departamentos de una carpeta ──
+  if (folder) {
+    return (
+      <div>
+        <button onClick={() => setFolder(null)} className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white">
+          <ChevronLeft className="h-4 w-4" /> Carpetas
+        </button>
+        <h1 className="mb-1 font-display text-2xl font-semibold text-white">{folder.name}</h1>
+        <p className="mb-6 text-muted">Elige un departamento para gestionar sus categorías de recursos.</p>
+        {folder.subcategories.length === 0 ? (
+          <div className="glass rounded-2xl p-8 text-center text-muted">
+            Esta carpeta no tiene departamentos. Puedes crear departamentos desde <strong className="text-white">Categorías</strong>.
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {folder.subcategories.map((s) => (
+              <button key={s.id} onClick={() => setDept(s)} className="glass sheen group flex items-center gap-3 rounded-2xl p-4 text-left transition-transform hover:-translate-y-1">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+                  <Ico name={s.icon} className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-white">{s.name}</p>
+                  {s.responsible && <p className="text-xs text-brand-glow">{s.responsible}</p>}
+                  <p className="text-xs text-muted">{s.count} recursos · {rcs.filter(r => r.subcategoryId === s.id).length} categorías</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted transition-colors group-hover:text-white" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Vista raíz: carpetas ──
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="font-display text-2xl font-semibold text-white">Organización</h1>
+        <p className="text-muted">Gestiona la estructura: Carpeta → Departamento → Categorías de recursos.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {categories.map((c) => (
+          <button key={c.id} onClick={() => setFolder(c)} className="glass sheen group flex items-center gap-3 rounded-2xl p-4 text-left transition-transform hover:-translate-y-1">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+              <Ico name={c.icon} className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-white">{c.name}</p>
+              <p className="text-xs text-muted">{c.subcategories.length} departamentos</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted transition-colors group-hover:text-white" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
