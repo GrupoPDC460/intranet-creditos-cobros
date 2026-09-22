@@ -360,8 +360,23 @@ export function CategoriesAdmin({
 
       <ConfirmDialog
         open={Boolean(toDelete)}
-        title="Eliminar categoría"
-        message={`¿Eliminar “${toDelete?.name}”? Se eliminarán también sus departamentos y los recursos que contenga. Esta acción no se puede deshacer.`}
+        title="Eliminar carpeta"
+        message={
+          toDelete
+            ? [
+                `¿Eliminar "${toDelete.name}"?`,
+                toDelete.subcategories.length > 0
+                  ? `Contiene ${toDelete.subcategories.length} departamento${toDelete.subcategories.length !== 1 ? "s" : ""}.`
+                  : null,
+                (counts[toDelete.id] ?? 0) > 0
+                  ? `Contiene ${counts[toDelete.id]} recurso${counts[toDelete.id] !== 1 ? "s" : ""} que también se eliminarán.`
+                  : null,
+                "Esta acción no se puede deshacer.",
+              ]
+                .filter(Boolean)
+                .join(" ")
+            : ""
+        }
         loading={deleting}
         onConfirm={confirmDelete}
         onCancel={() => setToDelete(null)}

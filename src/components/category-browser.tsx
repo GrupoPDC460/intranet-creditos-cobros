@@ -1,14 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, Folder, PackageOpen, Star } from "lucide-react";
+import { ChevronLeft, Folder, PackageOpen, Star, LayoutGrid } from "lucide-react";
 import { RESOURCE_TYPES, RESOURCE_TYPE_LABELS } from "@/lib/types";
 import type { Category, Resource, ResourceType } from "@/lib/types";
 import { typeIcon, TYPE_TINT } from "@/lib/icons";
 import { ResourceCard } from "@/components/resource-card";
 import { Reveal, EmptyState } from "@/components/ui";
-
-const GENERAL = "__general__";
 
 export function CategoryBrowser({
   category,
@@ -20,56 +18,65 @@ export function CategoryBrowser({
   const [openDept, setOpenDept] = useState<string | null>(null);
   const [type, setType] = useState<ResourceType | "all">("all");
 
-  const depts = useMemo(() => {
-    // Mostrar TODOS los departamentos, aunque estén vacíos (visibilidad de estructura).
-    const list = category.subcategories
-      .slice()
-      .sort((a, b) => a.order - b.order)
-      .map((sub) => ({
-        id: sub.id,
-        name: sub.name,
-        items: resources.filter((r) => r.subcategoryId === sub.id),
-      }));
+  // Recursos que pertenecen directamente a la carpeta (sin departamento)
+  const directResources = useMemo(
+    () =>
+      resources.filter(
+        (r) =>
+          !r.subcategoryId ||
+          !category.subcategories.some((s) => s.id === r.subcategoryId),
+      ),
+    [resources, category.subcategories],
+  );
 
-    const general = resources.filter(
-      (r) => !r.subcategoryId || !category.subcategories.some((s) => s.id === r.subcategoryId),
-    );
-    if (general.length) list.push({ id: GENERAL, name: "General", items: general });
-    return list;
-  }, [category.subcategories, resources]);
+  // Departamentos con sus recursos
+  const depts = useMemo(
+    () =>
+      category.subcategories
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((sub) => ({
+          id: sub.id,
+          name: sub.name,
+          items: resources.filter((r) => r.subcategoryId === sub.id),
+        })),
+    [category.subcategories, resources],
+  );
 
+  const hasDepts = depts.length > 0;
+  const hasDirect = directResources.length > 0;
   const current = depts.find((d) => d.id === openDept) ?? null;
 
-  if (resources.length === 0) {
+  // ── Vista vacía ──────────────────────────────────────────────
+  if (!hasDepts && !hasDirect) {
     return (
       <EmptyState
         icon={<PackageOpen className="h-5 w-5" />}
-        title="Esta categoría aún no tiene recursos"
-        description="El administrador puede agregar recursos desde el panel."
+        title="Esta carpeta aún no tiene contenido"
+        description="El administrador puede agregar departamentos o recursos desde el panel."
       />
     );
   }
 
-  // ---- Detalle: un departamento abierto, desglosado por tipo ----
+  // ── Detalle: departamento abierto ────────────────────────────
   if (current) {
     const filtered =
       type === "all" ? current.items : current.items.filter((r) => r.type === type);
-    const presentTypes = RESOURCE_TYPES.filter((t) => current.items.some((r) => r.type === t)).map(
-      (t) => ({ type: t, count: current.items.filter((r) => r.type === t).length }),
-    );
-    const empty = current.items.length === 0;
+    const presentTypes = RESOURCE_TYPES.filter((t) =>
+      current.items.some((r) => r.type === t),
+    ).map((t) => ({
+      type: t,
+      count: current.items.filter((r) => r.type === t).length,
+    }));
 
     return (
       <div>
         <button
-          onClick={() => {
-            setOpenDept(null);
-            setType("all");
-          }}
+          onClick={() => { setOpenDept(null); setType("all"); }}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
         >
           <ChevronLeft className="h-4 w-4" />
-          Departamentos
+          {category.name}
         </button>
 
         <div className="mb-6 flex items-center gap-3">
@@ -84,36 +91,27 @@ export function CategoryBrowser({
           </div>
         </div>
 
-        {empty ? (
+        {current.items.length === 0 ? (
           <EmptyState
             icon={<PackageOpen className="h-5 w-5" />}
             title="Este departamento aún no tiene recursos"
-            description="Agrega recursos a este departamento desde el panel de administración."
+            description="Agrega recursos desde el panel de administración."
           />
         ) : (
           <>
             <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
-              <FilterChip
-                active={type === "all"}
-                onClick={() => setType("all")}
-                label="Todos"
-                count={current.items.length}
-              />
+              <FilterChip active={type === "all"} onClick={() => setType("all")} label="Todos" count={current.items.length} />
               {presentTypes.map(({ type: t, count }) => {
                 const Icon = typeIcon(t);
                 return (
                   <FilterChip
-                    key={t}
-                    active={type === t}
-                    onClick={() => setType(t)}
-                    label={RESOURCE_TYPE_LABELS[t]}
-                    count={count}
+                    key={t} active={type === t} onClick={() => setType(t)}
+                    label={RESOURCE_TYPE_LABELS[t]} count={count}
                     icon={<Icon className="h-3.5 w-3.5" style={{ color: TYPE_TINT[t] }} />}
                   />
                 );
               })}
             </div>
-
             <TypeBreakdown items={filtered} />
           </>
         )}
@@ -121,10 +119,12 @@ export function CategoryBrowser({
     );
   }
 
-  // ---- Carpetas: los departamentos de la categoría ----
+  // ── Vista principal de la carpeta ────────────────────────────
   const featured = resources.filter((r) => r.featured);
+
   return (
     <div>
+      {/* Accesos rápidos */}
       {featured.length > 0 && (
         <section className="mb-10">
           <div className="mb-4 flex items-center gap-2">
@@ -141,155 +141,181 @@ export function CategoryBrowser({
         </section>
       )}
 
-      <div className="mb-4 flex items-center gap-2">
-        <Folder className="h-4 w-4 text-brand-glow" />
-        <h2 className="font-display text-lg font-semibold text-white">Departamentos</h2>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {depts.map((d, i) => (
-          <Reveal key={d.id} index={i}>
-            <DeptFolder name={d.name} items={d.items} onClick={() => setOpenDept(d.id)} />
-          </Reveal>
-        ))}
-        {depts.length === 0 && (
-          <p className="col-span-full text-sm text-muted">
-            Esta cajita aún no tiene departamentos ni recursos.
-          </p>
-        )}
-      </div>
+      {/* ESCENARIO A y C: Departamentos */}
+      {hasDepts && (
+        <section className={hasDirect ? "mb-10" : ""}>
+          <div className="mb-4 flex items-center gap-2">
+            <Folder className="h-4 w-4 text-brand-glow" />
+            <h2 className="font-display text-lg font-semibold text-white">Departamentos</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {depts.map((d, i) => (
+              <Reveal key={d.id} index={i}>
+                <DeptFolder
+                  name={d.name}
+                  items={d.items}
+                  onClick={() => setOpenDept(d.id)}
+                />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ESCENARIO B y C: Recursos directos (sin departamento) */}
+      {hasDirect && (
+        <section>
+          {hasDepts && (
+            <div className="mb-4 mt-2 flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4 text-brand-glow" />
+              <h2 className="font-display text-lg font-semibold text-white">
+                Recursos de {category.name}
+              </h2>
+            </div>
+          )}
+          <DirectResourcesView resources={directResources} />
+        </section>
+      )}
     </div>
   );
 }
 
+// ── Recursos directos agrupados por tipo (sin departamento ficticio) ──
+function DirectResourcesView({ resources }: { resources: Resource[] }) {
+  const [type, setType] = useState<ResourceType | "all">("all");
+
+  const presentTypes = RESOURCE_TYPES.filter((t) =>
+    resources.some((r) => r.type === t),
+  ).map((t) => ({ type: t, count: resources.filter((r) => r.type === t).length }));
+
+  const filtered = type === "all" ? resources : resources.filter((r) => r.type === type);
+
+  return (
+    <>
+      {presentTypes.length > 1 && (
+        <div className="-mx-1 mb-8 flex flex-wrap gap-1.5 px-1">
+          <FilterChip active={type === "all"} onClick={() => setType("all")} label="Todos" count={resources.length} />
+          {presentTypes.map(({ type: t, count }) => {
+            const Icon = typeIcon(t);
+            return (
+              <FilterChip
+                key={t} active={type === t} onClick={() => setType(t)}
+                label={RESOURCE_TYPE_LABELS[t]} count={count}
+                icon={<Icon className="h-3.5 w-3.5" style={{ color: TYPE_TINT[t] }} />}
+              />
+            );
+          })}
+        </div>
+      )}
+      <TypeBreakdown items={filtered} />
+    </>
+  );
+}
+
+// ── Tarjeta de departamento ───────────────────────────────────
 function DeptFolder({
-  name,
-  items,
-  onClick,
+  name, items, onClick,
 }: {
-  name: string;
-  items: Resource[];
-  onClick: () => void;
+  name: string; items: Resource[]; onClick: () => void;
 }) {
-  const present = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
+  const typeCounts = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t)).map(
+    (t) => ({ t, n: items.filter((r) => r.type === t).length }),
+  );
   return (
     <button
       onClick={onClick}
-      className="glass sheen group h-full w-full rounded-2xl p-5 text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
+      className="glass sheen group flex h-full w-full flex-col rounded-2xl p-5 text-left shadow-glass transition-transform duration-300 hover:-translate-y-1"
     >
-      <div className="relative z-[2] flex h-full flex-col">
-        <div className="flex items-start justify-between">
-          <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
-            <Folder className="h-6 w-6" />
-          </span>
-          <span className="chip">{items.length}</span>
-        </div>
-        <h3 className="mt-4 font-display text-lg font-semibold leading-tight text-white">{name}</h3>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {present.length === 0 ? (
-            <span className="text-[0.78rem] text-muted/70">Sin recursos aún</span>
-          ) : (
-            present.map((t) => {
-              const Icon = typeIcon(t);
-              const n = items.filter((r) => r.type === t).length;
-              return (
-                <span
-                  key={t}
-                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.72rem] text-muted"
-                >
-                  <Icon className="h-3 w-3" style={{ color: TYPE_TINT[t] }} />
-                  {n} {RESOURCE_TYPE_LABELS[t]}
-                </span>
-              );
-            })
-          )}
-        </div>
-        <span className="mt-4 inline-flex items-center gap-1 text-[0.8rem] font-medium text-brand-glow opacity-0 transition-opacity group-hover:opacity-100">
-          Abrir departamento →
+      <div className="relative z-[2] flex items-start justify-between">
+        <span className="grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-brand-glow">
+          <Folder className="h-6 w-6" />
         </span>
+        <span className="chip">{items.length} {items.length === 1 ? "recurso" : "recursos"}</span>
       </div>
+      <h3 className="relative z-[2] mt-4 font-display text-lg font-semibold text-white">{name}</h3>
+      {typeCounts.length > 0 && (
+        <div className="relative z-[2] mt-3 flex flex-wrap gap-1.5">
+          {typeCounts.slice(0, 4).map(({ t, n }) => {
+            const Icon = typeIcon(t);
+            return (
+              <span key={t} className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-muted">
+                <Icon className="h-3 w-3" style={{ color: TYPE_TINT[t] }} />
+                {n} {RESOURCE_TYPE_LABELS[t]}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </button>
   );
 }
 
+// ── Grilla de recursos agrupada por tipo ─────────────────────
 function TypeBreakdown({ items }: { items: Resource[] }) {
-  const present = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
-  if (present.length === 0) {
+  const presentTypes = RESOURCE_TYPES.filter((t) => items.some((r) => r.type === t));
+  if (items.length === 0) return null;
+
+  // Si solo hay un tipo, mostrar plano
+  if (presentTypes.length === 1) {
     return (
-      <EmptyState
-        icon={<PackageOpen className="h-5 w-5" />}
-        title="Nada con este filtro"
-        description="Prueba con otro tipo."
-      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((r, i) => (
+          <Reveal key={r.id} index={i}>
+            <ResourceCard resource={r} index={i} />
+          </Reveal>
+        ))}
+      </div>
     );
   }
-  if (present.length === 1) return <CardGrid items={items} />;
 
+  // Varios tipos → agrupar con encabezado
   return (
     <div className="space-y-8">
-      {present.map((t) => {
+      {presentTypes.map((t) => {
         const Icon = typeIcon(t);
-        const sub = items.filter((r) => r.type === t);
+        const group = items.filter((r) => r.type === t);
         return (
-          <div key={t}>
+          <section key={t}>
             <div className="mb-3 flex items-center gap-2">
               <Icon className="h-4 w-4" style={{ color: TYPE_TINT[t] }} />
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
                 {RESOURCE_TYPE_LABELS[t]}
               </h3>
-              <span className="text-xs text-muted/70">{sub.length}</span>
+              <span className="chip">{group.length}</span>
             </div>
-            <CardGrid items={sub} />
-          </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {group.map((r, i) => (
+                <Reveal key={r.id} index={i}>
+                  <ResourceCard resource={r} index={i} />
+                </Reveal>
+              ))}
+            </div>
+          </section>
         );
       })}
     </div>
   );
 }
 
-function CardGrid({ items }: { items: Resource[] }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((r, i) => (
-        <Reveal key={r.id} index={i}>
-          <ResourceCard resource={r} index={i} />
-        </Reveal>
-      ))}
-    </div>
-  );
-}
-
+// ── FilterChip ────────────────────────────────────────────────
 function FilterChip({
-  active,
-  onClick,
-  label,
-  count,
-  icon,
+  active, onClick, label, count, icon,
 }: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-  icon?: React.ReactNode;
+  active: boolean; onClick: () => void;
+  label: string; count: number; icon?: React.ReactNode;
 }) {
   return (
     <button
-      type="button"
       onClick={onClick}
-      aria-pressed={active}
-      className={
-        "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors " +
-        (active
-          ? "border-brand-400 bg-brand-500/20 text-white"
-          : "border-white/10 bg-white/5 text-muted hover:bg-white/10 hover:text-white")
-      }
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${
+        active
+          ? "border-brand-glow/50 bg-brand-glow/10 text-white"
+          : "border-white/10 bg-white/5 text-muted hover:border-white/20 hover:text-white"
+      }`}
     >
       {icon}
       {label}
-      <span
-        className={
-          "rounded-md px-1.5 text-xs " + (active ? "bg-white/15 text-white" : "bg-white/5 text-muted")
-        }
-      >
+      <span className={`text-xs ${active ? "text-brand-glow" : "text-muted/60"}`}>
         {count}
       </span>
     </button>
