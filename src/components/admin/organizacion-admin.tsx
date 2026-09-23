@@ -129,11 +129,19 @@ export function OrganizacionAdmin({
     const sw = idx + dir;
     if (sw < 0 || sw >= arr.length) return;
     const a = arr[idx], b = arr[sw];
-    await Promise.all([
+    // Actualizar el orden en memoria (sin recargar → no se sale de la vista)
+    setRcs((prev) =>
+      prev.map((rc) => {
+        if (rc.id === a.id) return { ...rc, order: b.order };
+        if (rc.id === b.id) return { ...rc, order: a.order };
+        return rc;
+      }),
+    );
+    // Guardar en la base en segundo plano
+    Promise.all([
       fetch(`/api/resource-categories/${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: b.order }) }),
       fetch(`/api/resource-categories/${b.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: a.order }) }),
-    ]);
-    reload();
+    ]).catch(() => toast("No se pudo guardar el orden.", "error"));
   }
 
   // ── Vista: categorías de un departamento ──
