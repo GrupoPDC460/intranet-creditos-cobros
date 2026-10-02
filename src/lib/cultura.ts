@@ -44,18 +44,30 @@ export async function getAllAlbums(): Promise<Album[]> {
 }
 
 export async function getAlbumsWithMeta(): Promise<AlbumWithMeta[]> {
-  const all = await getAllAlbums();
   const client = db();
-  const withMeta: AlbumWithMeta[] = [];
-  for (const a of all) {
-    const { count } = await client.from("cultura_photos").select("id", { count: "exact", head: true }).eq("album_id", a.id);
-    let cover = a.cover_url;
-    if (!cover) {
-      const { data } = await client.from("cultura_photos").select("url").eq("album_id", a.id).order("created_at", { ascending: true }).limit(1);
-      cover = (data && data[0]?.url) || null;
-    }
-    withMeta.push({ ...a, cover_url: cover, count: count || 0, children: [] });
+  // 2 consultas totales: álbumes + todas las fotos (solo lo necesario),
+  // y se calculan conteos y portadas en memoria (antes: 2 consultas por álbum).
+  const [all, photosRes] = await Promise.all([
+    getAllAlbums(),
+    client
+      .from("cultura_photos")
+      .select("album_id, url, created_at")
+      .order("created_at", { ascending: true }),
+  ]);
+
+  const counts: Record<string, number> = {};
+  const firstUrl: Record<string, string> = {};
+  for (const p of (photosRes.data as { album_id: string; url: string }[]) || []) {
+    counts[p.album_id] = (counts[p.album_id] || 0) + 1;
+    if (!firstUrl[p.album_id]) firstUrl[p.album_id] = p.url; // ya vienen ordenadas por fecha
   }
+
+  const withMeta: AlbumWithMeta[] = all.map((a) => ({
+    ...a,
+    cover_url: a.cover_url || firstUrl[a.id] || null,
+    count: counts[a.id] || 0,
+    children: [],
+  }));
   // Árbol: raíces y sus hijos
   const map = new Map(withMeta.map((a) => [a.id, a]));
   const roots: AlbumWithMeta[] = [];
