@@ -8,6 +8,7 @@ import type { Category, Resource } from "@/lib/types";
 import { RESOURCE_TYPE_LABELS } from "@/lib/types";
 import { resourceIcon, TYPE_TINT } from "@/lib/icons";
 import { Logo } from "@/components/ui";
+import { AccesosLink } from "@/components/accesos-link";
 
 export interface PublicData {
   categories: Category[];
@@ -235,6 +236,8 @@ export function HeaderBar({ onOpenSearch }: { onOpenSearch: () => void }) {
           >
             <Star className="h-4 w-4" />
           </Link>
+
+          <AccesosLink />
 
           <Link
             href="/cuenta"

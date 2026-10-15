@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { AccesosLink } from "@/components/accesos-link";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -76,6 +77,7 @@ export function AdminShell({
           </Link>
         );
       })}
+      <AccesosLink variant="nav" />
     </nav>
   );
 
