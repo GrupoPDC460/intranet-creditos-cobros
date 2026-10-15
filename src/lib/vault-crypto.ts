@@ -1,13 +1,16 @@
 /**
  * Cifrado de la bóveda en el navegador (Web Crypto).
- * - Llave: PBKDF2-SHA256 sobre la clave maestra + sal aleatoria.
- * - Cifrado: AES-256-GCM con IV aleatorio por registro (autenticado: detecta
- *   cualquier alteración del texto cifrado).
- * La clave maestra y la llave derivada nunca salen del navegador.
+ *
+ * Modelo de llaves:
+ * - Los accesos se cifran con una LLAVE INTERNA aleatoria (AES-256-GCM).
+ * - Esa llave interna se guarda una vez por persona ("ranura"), cifrada con una
+ *   llave derivada de la clave personal (PBKDF2-SHA256).
+ * - Así cada quien entra con su propia clave, y quien tiene acceso puede asignarle
+ *   una clave nueva a otro sin perder información.
+ * Las claves personales y la llave interna nunca salen del navegador.
  */
 
 export const ITERATIONS = 600000;
-const CHECK_TEXT = "PDC-ACCESOS-OK";
 
 export interface Acceso {
   app: string;
@@ -15,6 +18,13 @@ export interface Acceso {
   clave: string;
   url: string;
   notas: string;
+}
+
+export interface Slot {
+  salt: string;
+  iterations: number;
+  wrap_iv: string;
+  wrapped_key: string;
 }
 
 function toB64(buf: ArrayBuffer | Uint8Array): string {
@@ -31,11 +41,7 @@ function fromB64(b64: string): Uint8Array {
   return out;
 }
 
-export function randomB64(len: number): string {
-  return toB64(crypto.getRandomValues(new Uint8Array(len)));
-}
-
-export async function deriveKey(password: string, saltB64: string, iterations: number): Promise<CryptoKey> {
+async function derivar(password: string, saltB64: string, iterations: number): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"],
   );
@@ -48,47 +54,62 @@ export async function deriveKey(password: string, saltB64: string, iterations: n
   );
 }
 
-export async function encryptText(key: CryptoKey, text: string): Promise<{ iv: string; ciphertext: string }> {
+/** Llave interna nueva (solo al crear la bóveda). */
+export function nuevaLlaveInterna(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+
+export async function llaveDesdeInterna(raw: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+/** Crea una ranura: la llave interna cifrada con la clave de una persona. */
+export async function crearSlot(password: string, interna: Uint8Array): Promise<Slot> {
+  const salt = toB64(crypto.getRandomValues(new Uint8Array(16)));
+  const kek = await derivar(password, salt, ITERATIONS);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(text));
-  return { iv: toB64(iv), ciphertext: toB64(ct) };
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, kek, interna);
+  return { salt, iterations: ITERATIONS, wrap_iv: toB64(iv), wrapped_key: toB64(ct) };
 }
 
-export async function decryptText(key: CryptoKey, ivB64: string, ctB64: string): Promise<string> {
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(ivB64) }, key, fromB64(ctB64));
-  return new TextDecoder().decode(pt);
-}
-
-/** Crea los parámetros iniciales: sal + verificador cifrado con la nueva clave. */
-export async function createVaultMeta(password: string) {
-  const salt = randomB64(16);
-  const key = await deriveKey(password, salt, ITERATIONS);
-  const check = await encryptText(key, CHECK_TEXT);
-  return { meta: { salt, iterations: ITERATIONS, check_iv: check.iv, check_ct: check.ciphertext }, key };
-}
-
-/** Devuelve la llave si la clave maestra es correcta; null si no. */
-export async function unlockVault(
+/** Abre una ranura con la clave personal; null si la clave no es correcta. */
+export async function abrirSlot(
   password: string,
-  meta: { salt: string; iterations: number; check_iv: string; check_ct: string },
-): Promise<CryptoKey | null> {
+  slot: Slot,
+): Promise<{ interna: Uint8Array; llave: CryptoKey } | null> {
   try {
-    const key = await deriveKey(password, meta.salt, meta.iterations);
-    const text = await decryptText(key, meta.check_iv, meta.check_ct);
-    return text === CHECK_TEXT ? key : null;
+    const kek = await derivar(password, slot.salt, slot.iterations);
+    const raw = new Uint8Array(
+      await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(slot.wrap_iv) }, kek, fromB64(slot.wrapped_key)),
+    );
+    if (raw.length !== 32) return null;
+    return { interna: raw, llave: await llaveDesdeInterna(raw) };
   } catch {
-    return null; // AES-GCM falla la autenticación con una llave equivocada
+    return null; // AES-GCM rechaza una clave equivocada
   }
 }
 
-export async function encryptAcceso(key: CryptoKey, a: Acceso) {
-  return encryptText(key, JSON.stringify(a));
+export async function encryptAcceso(key: CryptoKey, a: Acceso): Promise<{ iv: string; ciphertext: string }> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(a)),
+  );
+  return { iv: toB64(iv), ciphertext: toB64(ct) };
 }
 
 export async function decryptAcceso(key: CryptoKey, iv: string, ct: string): Promise<Acceso> {
-  const raw = JSON.parse(await decryptText(key, iv, ct)) as Partial<Acceso>;
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(iv) }, key, fromB64(ct));
+  const raw = JSON.parse(new TextDecoder().decode(pt)) as Partial<Acceso>;
   return {
     app: raw.app ?? "", usuario: raw.usuario ?? "", clave: raw.clave ?? "",
     url: raw.url ?? "", notas: raw.notas ?? "",
   };
+}
+
+/** Clave temporal legible para asignar a otra persona (se entrega en persona). */
+export function claveTemporal(): string {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin O/0/I/1 para evitar confusiones
+  const b = crypto.getRandomValues(new Uint8Array(12));
+  const s = Array.from(b, (x) => abc[x % abc.length]).join("");
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
 }

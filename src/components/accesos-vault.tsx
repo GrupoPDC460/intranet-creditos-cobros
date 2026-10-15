@@ -3,17 +3,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyRound, Lock, Unlock, Plus, Search, Copy, Eye, EyeOff, Pencil, Trash2,
-  ExternalLink, ShieldCheck, AlertTriangle, Check, X,
+  ExternalLink, ShieldCheck, AlertTriangle, Check, X, Users, RefreshCw,
 } from "lucide-react";
 import {
-  createVaultMeta, unlockVault, encryptAcceso, decryptAcceso, type Acceso,
+  nuevaLlaveInterna, crearSlot, abrirSlot, llaveDesdeInterna, claveTemporal,
+  encryptAcceso, decryptAcceso, type Acceso, type Slot,
 } from "@/lib/vault-crypto";
 
-type Meta = { salt: string; iterations: number; check_iv: string; check_ct: string };
+type SlotRow = Slot & { login: string; must_change: boolean };
+type Miembro = { login: string; nombre: string; tieneClave: boolean; temporal: boolean };
 type Row = { id: string; iv: string; ciphertext: string; updated_at: string; updated_by: string | null };
 type Item = Acceso & { id: string; updated_at: string; updated_by: string | null };
+type Datos = { yo: string; miSlot: SlotRow | null; hayBoveda: boolean; miembros: Miembro[]; entries: Row[] };
 
 const AUTO_LOCK_MS = 10 * 60 * 1000; // 10 minutos sin actividad
+const MIN_CLAVE = 8;
 const VACIO: Acceso = { app: "", usuario: "", clave: "", url: "", notas: "" };
 
 function registrar(action: string, entryId?: string) {
@@ -22,6 +26,18 @@ function registrar(action: string, entryId?: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, entryId }),
   }).catch(() => {});
+}
+
+async function guardarSlot(login: string, slot: Slot): Promise<void> {
+  const r = await fetch("/api/accesos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "setSlot", login, slot }),
+  });
+  if (!r.ok) {
+    const j = (await r.json().catch(() => ({}))) as { error?: string };
+    throw new Error(j.error || "No se pudo guardar la clave.");
+  }
 }
 
 /** Solo se enlazan URLs http(s); cualquier otra cosa se muestra como texto. */
@@ -37,29 +53,47 @@ function urlSegura(u: string): string | null {
   }
 }
 
+function Encabezado({ icon, titulo, sub }: { icon: React.ReactNode; titulo: string; sub: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5">{icon}</span>
+      <div>
+        <h2 className="font-display text-lg font-semibold text-white">{titulo}</h2>
+        <p className="text-sm text-muted">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
 export function AccesosVault() {
-  const [estado, setEstado] = useState<"cargando" | "error" | "configurar" | "bloqueada" | "abierta">("cargando");
-  const [meta, setMeta] = useState<Meta | null>(null);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [estado, setEstado] = useState<
+    "cargando" | "error" | "crear" | "sinClave" | "bloqueada" | "cambiar" | "abierta"
+  >("cargando");
+  const [datos, setDatos] = useState<Datos | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [msg, setMsg] = useState("");
-  const keyRef = useRef<CryptoKey | null>(null);
+  const llaveRef = useRef<CryptoKey | null>(null);
+  const internaRef = useRef<Uint8Array | null>(null);
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (): Promise<Datos | null> => {
     const r = await fetch("/api/accesos", { cache: "no-store" });
     if (!r.ok) { setEstado("error"); return null; }
-    const data = (await r.json()) as { meta: Meta | null; entries: Row[] };
-    setMeta(data.meta);
-    setRows(data.entries);
-    return data;
+    const d = (await r.json()) as Datos;
+    setDatos(d);
+    return d;
   }, []);
 
   useEffect(() => {
-    cargar().then((d) => { if (d) setEstado(d.meta ? "bloqueada" : "configurar"); });
+    cargar().then((d) => {
+      if (!d) return;
+      if (!d.hayBoveda) setEstado("crear");
+      else if (!d.miSlot) setEstado("sinClave");
+      else setEstado("bloqueada");
+    });
   }, [cargar]);
 
   const descifrarTodo = useCallback(async (lista: Row[]) => {
-    const key = keyRef.current;
+    const key = llaveRef.current;
     if (!key) return;
     const out: Item[] = [];
     for (const r of lista) {
@@ -67,7 +101,7 @@ export function AccesosVault() {
         const a = await decryptAcceso(key, r.iv, r.ciphertext);
         out.push({ ...a, id: r.id, updated_at: r.updated_at, updated_by: r.updated_by });
       } catch {
-        // Registro dañado o de otra clave: se omite sin romper la vista.
+        // Registro dañado: se omite sin romper la vista.
       }
     }
     out.sort((a, b) => a.app.localeCompare(b.app, "es", { sensitivity: "base" }));
@@ -75,7 +109,9 @@ export function AccesosVault() {
   }, []);
 
   const bloquear = useCallback((aviso?: string) => {
-    keyRef.current = null;
+    llaveRef.current = null;
+    if (internaRef.current) internaRef.current.fill(0);
+    internaRef.current = null;
     setItems([]);
     setEstado("bloqueada");
     if (aviso) setMsg(aviso);
@@ -83,12 +119,10 @@ export function AccesosVault() {
 
   // Bloqueo automático por inactividad.
   useEffect(() => {
-    if (estado !== "abierta") return;
-    let t = window.setTimeout(() => bloquear("Bóveda bloqueada por inactividad."), AUTO_LOCK_MS);
-    const reset = () => {
-      window.clearTimeout(t);
-      t = window.setTimeout(() => bloquear("Bóveda bloqueada por inactividad."), AUTO_LOCK_MS);
-    };
+    if (estado !== "abierta" && estado !== "cambiar") return;
+    const fin = () => bloquear("Bóveda bloqueada por inactividad.");
+    let t = window.setTimeout(fin, AUTO_LOCK_MS);
+    const reset = () => { window.clearTimeout(t); t = window.setTimeout(fin, AUTO_LOCK_MS); };
     const ev = ["mousemove", "keydown", "click", "scroll", "touchstart"];
     ev.forEach((e) => window.addEventListener(e, reset, { passive: true }));
     return () => { window.clearTimeout(t); ev.forEach((e) => window.removeEventListener(e, reset)); };
@@ -99,122 +133,157 @@ export function AccesosVault() {
     if (d) await descifrarTodo(d.entries);
   }
 
-  if (estado === "cargando") {
-    return <p className="mt-10 text-muted">Cargando…</p>;
+  async function entrar(interna: Uint8Array, llave: CryptoKey, temporal: boolean) {
+    internaRef.current = interna;
+    llaveRef.current = llave;
+    setMsg("");
+    registrar("abrir");
+    if (temporal) { setEstado("cambiar"); return; }
+    await recargarYDescifrar();
+    setEstado("abierta");
   }
-  if (estado === "error") {
-    return <p className="mt-10 text-muted">No tienes acceso a esta sección.</p>;
-  }
-  if (estado === "configurar") {
+
+  if (estado === "cargando") return <p className="mt-10 text-muted">Cargando…</p>;
+  if (estado === "error") return <p className="mt-10 text-muted">No tienes acceso a esta sección.</p>;
+
+  if (estado === "crear") {
     return (
-      <Configurar
-        onListo={async (key) => {
-          keyRef.current = key;
+      <CrearBoveda
+        onListo={async (interna, llave) => { await entrar(interna, llave, false); }}
+      />
+    );
+  }
+
+  if (estado === "sinClave") {
+    return (
+      <div className="glass-strong mx-auto mt-10 max-w-md rounded-2xl p-6">
+        <Encabezado icon={<Lock className="h-5 w-5 text-brand-glow" />} titulo="Aún no tienes clave" sub="La bóveda ya existe, pero no tienes una clave asignada." />
+        <p className="mt-4 text-sm text-muted">
+          Pide a quien administra la bóveda que te asigne una <strong className="text-white">clave temporal</strong>.
+          La primera vez que entres con ella, podrás definir la tuya.
+        </p>
+      </div>
+    );
+  }
+
+  if (estado === "bloqueada" && datos?.miSlot) {
+    return (
+      <Desbloquear
+        slot={datos.miSlot}
+        aviso={msg}
+        onListo={(interna, llave) => entrar(interna, llave, !!datos.miSlot?.must_change)}
+      />
+    );
+  }
+
+  if (estado === "cambiar" && datos) {
+    return (
+      <DefinirClave
+        titulo="Define tu propia clave"
+        sub="Entraste con una clave temporal. Crea la tuya para continuar."
+        boton="Guardar mi clave"
+        onGuardar={async (clave) => {
+          await guardarSlot(datos.yo, await crearSlot(clave, internaRef.current!));
           await recargarYDescifrar();
           setEstado("abierta");
         }}
       />
     );
   }
-  if (estado === "bloqueada" && meta) {
-    return (
-      <Desbloquear
-        meta={meta}
-        aviso={msg}
-        onListo={async (key) => {
-          keyRef.current = key;
-          setMsg("");
-          await descifrarTodo(rows);
-          registrar("abrir");
-          setEstado("abierta");
-        }}
-      />
-    );
-  }
 
+  if (!datos) return null;
   return (
     <Boveda
       items={items}
-      llave={keyRef}
+      llave={llaveRef}
       onCambio={recargarYDescifrar}
       onBloquear={() => bloquear()}
+      personas={
+        <PanelPersonas
+          yo={datos.yo}
+          miembros={datos.miembros}
+          interna={internaRef}
+          onCambio={async () => { await cargar(); }}
+        />
+      }
     />
   );
 }
 
-/* ------------------------------ Configuración ------------------------------ */
+/* ---------------------- Crear bóveda / definir clave ----------------------- */
 
-function Configurar({ onListo }: { onListo: (k: CryptoKey) => void }) {
+function DefinirClave({
+  titulo, sub, boton, aviso, onGuardar,
+}: {
+  titulo: string; sub: string; boton: string; aviso?: React.ReactNode;
+  onGuardar: (clave: string) => Promise<void>;
+}) {
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
-  const [entiendo, setEntiendo] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function crear(e: React.FormEvent) {
+  async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setErr("");
-    if (p1.length < 12) return setErr("Usa al menos 12 caracteres.");
+    if (p1.length < MIN_CLAVE) return setErr(`Usa al menos ${MIN_CLAVE} caracteres.`);
     if (p1 !== p2) return setErr("Las claves no coinciden.");
-    if (!entiendo) return setErr("Confirma que entiendes que la clave no se puede recuperar.");
     setBusy(true);
-    try {
-      const { meta, key } = await createVaultMeta(p1);
-      const r = await fetch("/api/accesos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "init", meta }),
-      });
-      if (!r.ok) {
-        const j = (await r.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || "No se pudo configurar.");
-      }
-      onListo(key);
-    } catch (e2) {
-      setErr((e2 as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    try { await onGuardar(p1); } catch (e2) { setErr((e2 as Error).message); } finally { setBusy(false); }
   }
 
   return (
-    <form onSubmit={crear} className="glass-strong mx-auto mt-10 max-w-md rounded-2xl p-6">
-      <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5">
-          <ShieldCheck className="h-5 w-5 text-brand-glow" />
-        </span>
-        <div>
-          <h2 className="font-display text-lg font-semibold text-white">Crear clave maestra</h2>
-          <p className="text-sm text-muted">Protege todas las contraseñas de la bóveda.</p>
-        </div>
-      </div>
-      <div className="mt-5 flex items-start gap-3 rounded-xl border border-gold/30 bg-gold/10 p-3 text-sm text-white">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-        <span>
-          Esta clave <strong>no se guarda en ningún lado</strong>. Si se olvida, las contraseñas
-          guardadas <strong>no se pueden recuperar</strong>. Anótala en un lugar seguro y compártela
-          solo con quien deba usar la bóveda.
-        </span>
-      </div>
-      <label className="label mt-5">Clave maestra</label>
-      <input className="field" type="password" autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} />
-      <label className="label mt-3">Repetir clave maestra</label>
+    <form onSubmit={enviar} className="glass-strong mx-auto mt-10 max-w-md rounded-2xl p-6">
+      <Encabezado icon={<ShieldCheck className="h-5 w-5 text-brand-glow" />} titulo={titulo} sub={sub} />
+      {aviso}
+      <label className="label mt-5">Clave</label>
+      <input className="field" type="password" autoFocus autoComplete="new-password" value={p1} onChange={(e) => setP1(e.target.value)} />
+      <label className="label mt-3">Repetir clave</label>
       <input className="field" type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} />
-      <label className="mt-4 flex items-start gap-2 text-sm text-muted">
-        <input type="checkbox" className="mt-1" checked={entiendo} onChange={(e) => setEntiendo(e.target.checked)} />
-        Entiendo que si la clave maestra se pierde, no hay forma de recuperarla.
-      </label>
       {err && <p className="mt-3 text-sm text-red-300">{err}</p>}
-      <button className="btn btn-primary mt-5 w-full" disabled={busy}>
-        {busy ? "Configurando…" : "Crear bóveda"}
-      </button>
+      <button className="btn btn-primary mt-5 w-full" disabled={busy}>{busy ? "Guardando…" : boton}</button>
     </form>
+  );
+}
+
+function CrearBoveda({ onListo }: { onListo: (interna: Uint8Array, llave: CryptoKey) => Promise<void> }) {
+  return (
+    <DefinirClave
+      titulo="Crear la bóveda"
+      sub="Define tu clave personal para la bóveda."
+      boton="Crear bóveda"
+      aviso={
+        <div className="mt-5 flex items-start gap-3 rounded-xl border border-gold/30 bg-gold/10 p-3 text-sm text-white">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+          <span>
+            Después podrás asignar una clave a Erwin. Si alguno olvida la suya, el otro puede asignarle una nueva
+            sin perder nada. Solo se perdería todo si <strong>ambos</strong> olvidan su clave.
+          </span>
+        </div>
+      }
+      onGuardar={async (clave) => {
+        const interna = nuevaLlaveInterna();
+        const slot = await crearSlot(clave, interna);
+        const r = await fetch("/api/accesos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "init", slot }),
+        });
+        if (!r.ok) {
+          const j = (await r.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error || "No se pudo crear la bóveda.");
+        }
+        await onListo(interna, await llaveDesdeInterna(interna));
+      }}
+    />
   );
 }
 
 /* ------------------------------- Desbloqueo -------------------------------- */
 
-function Desbloquear({ meta, aviso, onListo }: { meta: Meta; aviso: string; onListo: (k: CryptoKey) => void }) {
+function Desbloquear({
+  slot, aviso, onListo,
+}: { slot: Slot; aviso: string; onListo: (interna: Uint8Array, llave: CryptoKey) => void }) {
   const [p, setP] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -229,32 +298,24 @@ function Desbloquear({ meta, aviso, onListo }: { meta: Meta; aviso: string; onLi
     }
     setErr("");
     setBusy(true);
-    const key = await unlockVault(p, meta);
+    const r = await abrirSlot(p, slot);
     setBusy(false);
-    if (!key) {
+    if (!r) {
       const n = fallos + 1;
       setFallos(n);
       if (n >= 5) { setEsperaHasta(Date.now() + 30000); setFallos(0); }
-      setErr("Clave maestra incorrecta.");
+      setErr("Clave incorrecta.");
       return;
     }
     setP("");
-    onListo(key);
+    onListo(r.interna, r.llave);
   }
 
   return (
     <form onSubmit={abrir} className="glass-strong mx-auto mt-10 max-w-md rounded-2xl p-6">
-      <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5">
-          <Lock className="h-5 w-5 text-brand-glow" />
-        </span>
-        <div>
-          <h2 className="font-display text-lg font-semibold text-white">Bóveda bloqueada</h2>
-          <p className="text-sm text-muted">Escribe la clave maestra para ver los accesos.</p>
-        </div>
-      </div>
+      <Encabezado icon={<Lock className="h-5 w-5 text-brand-glow" />} titulo="Bóveda bloqueada" sub="Escribe tu clave de la bóveda para ver los accesos." />
       {aviso && <p className="mt-4 text-sm text-gold">{aviso}</p>}
-      <label className="label mt-5">Clave maestra</label>
+      <label className="label mt-5">Tu clave</label>
       <input className="field" type="password" autoFocus autoComplete="current-password" value={p} onChange={(e) => setP(e.target.value)} />
       {err && <p className="mt-3 text-sm text-red-300">{err}</p>}
       <button className="btn btn-primary mt-5 w-full" disabled={busy || !p}>
@@ -265,15 +326,110 @@ function Desbloquear({ meta, aviso, onListo }: { meta: Meta; aviso: string; onLi
   );
 }
 
+/* ------------------------------ Personas ----------------------------------- */
+
+function PanelPersonas({
+  yo, miembros, interna, onCambio,
+}: {
+  yo: string; miembros: Miembro[]; interna: React.MutableRefObject<Uint8Array | null>;
+  onCambio: () => Promise<void>;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [temporal, setTemporal] = useState<{ login: string; clave: string } | null>(null);
+  const [cambiarPropia, setCambiarPropia] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function asignar(m: Miembro) {
+    const aviso = m.tieneClave
+      ? `${m.nombre} ya tiene clave. Se le asignará una temporal nueva (la anterior dejará de funcionar). ¿Continuar?`
+      : `Se generará una clave temporal para ${m.nombre}. ¿Continuar?`;
+    if (!window.confirm(aviso)) return;
+    setErr("");
+    try {
+      if (!interna.current) throw new Error("La bóveda se bloqueó. Vuelve a desbloquearla.");
+      const clave = claveTemporal();
+      await guardarSlot(m.login, await crearSlot(clave, interna.current));
+      setTemporal({ login: m.nombre, clave });
+      await onCambio();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <button className="btn btn-ghost" onClick={() => setAbierto((v) => !v)}>
+        <Users className="h-4 w-4" /> Personas con acceso
+      </button>
+      {abierto && (
+        <div className="glass mt-3 rounded-2xl p-5">
+          <div className="space-y-2">
+            {miembros.map((m) => (
+              <div key={m.login} className="flex flex-wrap items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">{m.nombre}{m.login === yo ? " · tú" : ""}</p>
+                  <p className="text-xs text-muted">
+                    {!m.tieneClave ? "Sin clave asignada" : m.temporal ? "Clave temporal (debe cambiarla)" : "Con clave propia"}
+                  </p>
+                </div>
+                {m.login === yo ? (
+                  <button className="btn btn-ghost text-xs" onClick={() => setCambiarPropia(true)}>Cambiar mi clave</button>
+                ) : (
+                  <button className="btn btn-ghost text-xs" onClick={() => asignar(m)}>
+                    <RefreshCw className="h-3.5 w-3.5" /> {m.tieneClave ? "Restablecer clave" : "Asignar clave"}
+                  </button>
+                )}
+              </div>
+            ))}
+            {miembros.length < 2 && (
+              <p className="text-xs text-muted">Cuando Erwin tenga cuenta en la intranet y sea habilitado, aparecerá aquí.</p>
+            )}
+          </div>
+          {err && <p className="mt-3 text-sm text-red-300">{err}</p>}
+          {temporal && (
+            <div className="mt-4 rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-white">
+              <p>Clave temporal para <strong>{temporal.login}</strong>:</p>
+              <p className="mt-2 select-all font-mono text-lg tracking-wider">{temporal.clave}</p>
+              <p className="mt-2 text-xs text-muted">
+                Anótala y entrégala en persona. Solo se muestra esta vez. Al entrar con ella, se le pedirá crear su propia clave.
+              </p>
+              <button className="btn btn-ghost mt-3 text-xs" onClick={() => setTemporal(null)}>Ya la entregué, ocultar</button>
+            </div>
+          )}
+        </div>
+      )}
+      {cambiarPropia && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-[#05081c]/70 backdrop-blur-sm" onClick={() => setCambiarPropia(false)} aria-hidden="true" />
+          <div className="relative w-full max-w-md">
+            <DefinirClave
+              titulo="Cambiar mi clave"
+              sub="Tu nueva clave para abrir la bóveda."
+              boton="Guardar nueva clave"
+              onGuardar={async (clave) => {
+                if (!interna.current) throw new Error("La bóveda se bloqueó. Vuelve a desbloquearla.");
+                await guardarSlot(yo, await crearSlot(clave, interna.current));
+                setCambiarPropia(false);
+                await onCambio();
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --------------------------------- Bóveda ---------------------------------- */
 
 function Boveda({
-  items, llave, onCambio, onBloquear,
+  items, llave, onCambio, onBloquear, personas,
 }: {
   items: Item[];
   llave: React.MutableRefObject<CryptoKey | null>;
   onCambio: () => Promise<void>;
   onBloquear: () => void;
+  personas: React.ReactNode;
 }) {
   const [q, setQ] = useState("");
   const [editando, setEditando] = useState<Item | "nuevo" | null>(null);
@@ -315,6 +471,8 @@ function Boveda({
       <p className="mt-3 text-sm text-muted">
         {items.length} acceso{items.length === 1 ? "" : "s"} · se bloquea sola tras 10 min sin actividad
       </p>
+
+      {personas}
 
       {aviso && (
         <div className="fixed bottom-6 right-6 z-[95] flex items-center gap-2 rounded-xl border border-white/10 bg-ink-800/95 px-4 py-3 text-sm text-white shadow-glass-lg">

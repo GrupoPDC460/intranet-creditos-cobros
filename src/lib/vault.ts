@@ -66,11 +66,81 @@ export async function audit(login: string, action: string, entryId?: string | nu
   }
 }
 
-export interface VaultMeta {
+export interface SlotRow {
+  login: string;
   salt: string;
   iterations: number;
-  check_iv: string;
-  check_ct: string;
+  wrap_iv: string;
+  wrapped_key: string;
+  must_change: boolean;
+}
+
+export interface Miembro {
+  login: string;
+  nombre: string;
+  tieneClave: boolean;
+  temporal: boolean;
+}
+
+/** Login con el que el administrador maestro aparece en la bóveda. */
+export function loginMaestro(): string {
+  return masterLogin();
+}
+
+export async function getSlot(login: string): Promise<SlotRow | null> {
+  const { data } = await db()
+    .from("vault_keyslots")
+    .select("login, salt, iterations, wrap_iv, wrapped_key, must_change")
+    .eq("login", login)
+    .maybeSingle();
+  return (data as SlotRow) || null;
+}
+
+export async function countSlots(): Promise<number> {
+  const { count } = await db().from("vault_keyslots").select("login", { count: "exact", head: true });
+  return count || 0;
+}
+
+export async function upsertSlot(
+  login: string,
+  slot: { salt: string; iterations: number; wrap_iv: string; wrapped_key: string },
+  mustChange: boolean,
+  by: string,
+) {
+  const { error } = await db().from("vault_keyslots").upsert({
+    login, ...slot, must_change: mustChange, updated_by: by, updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Personas con derecho a la bóveda: el maestro + los miembros autorizados. */
+export async function listarMiembros(): Promise<Miembro[]> {
+  const cli = db();
+  const [{ data: miembros }, { data: slots }] = await Promise.all([
+    cli.from("vault_members").select("login"),
+    cli.from("vault_keyslots").select("login, must_change"),
+  ]);
+  const logins = [masterLogin(), ...((miembros || []) as { login: string }[]).map((m) => m.login)];
+  const unicos = Array.from(new Set(logins));
+  const { data: users } = await cli.from("app_users").select("username, full_name").in("username", unicos);
+  const nombres = new Map(((users || []) as { username: string; full_name: string | null }[]).map((u) => [u.username, u.full_name]));
+  const porSlot = new Map(((slots || []) as { login: string; must_change: boolean }[]).map((x) => [x.login, x.must_change]));
+  return unicos.map((login) => ({
+    login,
+    nombre: login === masterLogin() ? "Administrador (Daniel Monge)" : nombres.get(login) || login,
+    tieneClave: porSlot.has(login),
+    temporal: porSlot.get(login) === true,
+  }));
+}
+
+/** Validación de una ranura recibida del navegador. */
+export function validSlot(x: unknown): x is { salt: string; iterations: number; wrap_iv: string; wrapped_key: string } {
+  const s = x as Record<string, unknown> | null;
+  return !!s &&
+    typeof s.salt === "string" && /^[A-Za-z0-9+/=]{20,64}$/.test(s.salt) &&
+    typeof s.iterations === "number" && s.iterations >= 300000 && s.iterations <= 5000000 &&
+    typeof s.wrap_iv === "string" && /^[A-Za-z0-9+/=]{16,24}$/.test(s.wrap_iv) &&
+    typeof s.wrapped_key === "string" && /^[A-Za-z0-9+/=]{40,80}$/.test(s.wrapped_key);
 }
 
 export interface VaultEntry {
@@ -79,21 +149,6 @@ export interface VaultEntry {
   ciphertext: string;
   updated_at: string;
   updated_by: string | null;
-}
-
-export async function getMeta(): Promise<VaultMeta | null> {
-  const { data } = await db()
-    .from("vault_meta")
-    .select("salt, iterations, check_iv, check_ct")
-    .eq("id", 1)
-    .maybeSingle();
-  return (data as VaultMeta) || null;
-}
-
-export async function createMeta(meta: VaultMeta): Promise<boolean> {
-  // Solo se puede crear una vez: si ya existe, no se sobrescribe.
-  const { error } = await db().from("vault_meta").insert({ id: 1, ...meta });
-  return !error;
 }
 
 export async function listEntries(): Promise<VaultEntry[]> {
