@@ -255,8 +255,8 @@ export function ResourcesAdmin({
                       <Star
                         className="h-3.5 w-3.5"
                         style={{
-                          color: r.featured ? "#F3B24E" : "#9AA6C7",
-                          fill: r.featured ? "#F3B24E" : "transparent",
+                          color: r.featured ? "#FF7A3C" : "#9AA6C7",
+                          fill: r.featured ? "#FF7A3C" : "transparent",
                         }}
                       />
                       <Toggle
