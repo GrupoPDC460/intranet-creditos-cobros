@@ -50,8 +50,8 @@ export function FavoriteButton({
           className="h-4 w-4"
           strokeWidth={2}
           style={{
-            color: active ? "#F3B24E" : "#9AA6C7",
-            fill: active ? "#F3B24E" : "transparent",
+            color: active ? "#FF7A3C" : "#9AA6C7",
+            fill: active ? "#FF7A3C" : "transparent",
           }}
         />
       </motion.span>
@@ -95,7 +95,7 @@ export function ResourceCard({
                 title="Recurso destacado"
                 style={{ background: "rgba(245,166,35,0.12)" }}
               >
-                <Star className="h-4 w-4" style={{ color: "#F3B24E", fill: "#F3B24E" }} />
+                <Star className="h-4 w-4" style={{ color: "#FF7A3C", fill: "#FF7A3C" }} />
               </span>
             )}
             <FavoriteButton resource={resource} />

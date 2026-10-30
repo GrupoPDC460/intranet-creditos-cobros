@@ -12,7 +12,8 @@ export function useOpenSearch() {
 
 function Footer() {
   return (
-    <footer className="mt-24 border-t border-white/[0.08]">
+    <footer className="relative mt-24 border-t border-white/[0.08]">
+      <div className="absolute inset-x-0 top-0 h-[3px] bg-brand" aria-hidden="true" />
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:flex-row sm:items-center sm:px-6">
         <Logo />
         <p className="text-sm text-muted">

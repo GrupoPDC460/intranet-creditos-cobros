@@ -10,7 +10,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/pdc-logo-3d.png" alt="Grupo PDC" className="h-9 w-auto drop-shadow" />
+      <img src="/brand/grupo-pdc-blanco.png" alt="Grupo PDC" className="h-9 w-auto" />
       <span className="hidden text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-brand-glow sm:inline">
         Créditos &amp; Cobros
       </span>

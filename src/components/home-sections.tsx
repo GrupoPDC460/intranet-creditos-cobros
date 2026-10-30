@@ -135,7 +135,7 @@ export function CategoryGrid({
                       style={
                         accent && !hasCover
                           ? { background: `linear-gradient(135deg, ${accent}33 0%, ${accent}11 100%)` }
-                          : { background: "linear-gradient(135deg, #00216f 0%, #1a5fa8 100%)" }
+                          : { background: "linear-gradient(135deg, #00216f 0%, #0a2c7a 100%)" }
                       }
                     >
                       {hasCover && (
@@ -149,7 +149,7 @@ export function CategoryGrid({
                       {isCultura && !hasCover && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src="/pdc-logo-3d.png"
+                          src="/brand/grupo-pdc-blanco.png"
                           alt="Grupo PDC"
                           className="absolute left-1/2 top-1/2 h-20 w-auto -translate-x-1/2 -translate-y-1/2 object-contain opacity-90 drop-shadow-lg transition-transform duration-500 group-hover:scale-105"
                         />

@@ -7,7 +7,7 @@ import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 const LOGO = (
   <div className="neu-logo">
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src="/pdc-logo.png" alt="Grupo PDC" />
+    <img src="/brand/grupo-pdc-principal.png" alt="Grupo PDC" />
   </div>
 );
 
