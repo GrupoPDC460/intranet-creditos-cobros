@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 
 const BUCKET = "cultura";
 
@@ -34,7 +35,7 @@ function db() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-    { auth: { persistSession: false }, global: { fetch: (i, init) => fetch(i, { ...init, cache: "no-store" }) } },
+    { auth: { persistSession: false }, global: { fetch: supabaseFetch } },
   );
 }
 

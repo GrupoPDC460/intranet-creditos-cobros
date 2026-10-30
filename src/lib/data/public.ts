@@ -8,22 +8,23 @@ export interface PublicView {
   countByCategory: Record<string, number>;
 }
 
+/** Última lectura exitosa (por instancia del servidor), respaldo ante fallas. */
+let lastGood: { categories: Category[]; resources: Resource[]; resourceCategories?: ResourceCategory[] } | null = null;
+
 /** Datos visibles al público: categorías y recursos activos, ya ordenados. */
 export async function getPublicView(): Promise<PublicView> {
-  // Reintento ante errores transitorios de Supabase (p.ej. PGRST303 por desfase
-  // de reloj), para que el portal no caiga a la pantalla de error.
-  let data: { categories: Category[]; resources: Resource[]; resourceCategories?: ResourceCategory[] } | null = null;
-  let lastErr: unknown = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      data = await getRepository().getAll();
-      break;
-    } catch (e) {
-      lastErr = e;
-      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
-    }
+  // Los reintentos ante fallas transitorias de Supabase (PGRST303, 5xx, red)
+  // viven en supabaseFetch. Si aun así falla, servimos la última lectura buena
+  // de esta instancia en vez de mandar al usuario a la pantalla de error.
+  let data: { categories: Category[]; resources: Resource[]; resourceCategories?: ResourceCategory[] };
+  try {
+    data = await getRepository().getAll();
+    lastGood = data;
+  } catch (e) {
+    if (!lastGood) throw e;
+    console.warn("[public] Supabase no respondió; usando la última lectura buena", e);
+    data = lastGood;
   }
-  if (!data) throw lastErr;
   const { categories, resources, resourceCategories = [] } = data;
 
   const activeResources = resources

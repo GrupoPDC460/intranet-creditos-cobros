@@ -9,6 +9,7 @@
  * - Toda verificación se hace en el servidor; ocultar la tarjeta es solo cosmético.
  */
 import { createClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import { getSession } from "@/lib/require-admin";
 import { getUserByLogin, usersConfigured } from "@/lib/users";
 
@@ -18,7 +19,7 @@ function db() {
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
     {
       auth: { persistSession: false },
-      global: { fetch: (i, init) => fetch(i, { ...init, cache: "no-store" }) },
+      global: { fetch: supabaseFetch },
     },
   );
 }

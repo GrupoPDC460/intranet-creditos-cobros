@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import type {
   Category,
   CategoryInput,
@@ -105,7 +106,7 @@ export class SupabaseRepository implements Repository {
       global: {
         // Evita la caché de datos de Next.js: cada lectura va a la base en vivo.
         // Sin esto, las páginas públicas servían una foto vieja del build.
-        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+        fetch: supabaseFetch,
       },
     });
   }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 
 export default function GlobalError({
@@ -10,6 +11,18 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  // reset() solo vuelve a pintar en el navegador; si el fallo vino del servidor
+  // hay que pedir los datos de nuevo con router.refresh(), si no el botón no hace nada.
+  function retry() {
+    startTransition(() => {
+      router.refresh();
+      reset();
+    });
+  }
+
   useEffect(() => {
     // En producción esto podría enviarse a un servicio de monitoreo.
     console.error(error);
@@ -27,8 +40,8 @@ export default function GlobalError({
         Ocurrió un problema al mostrar esta sección. Puedes reintentar; si
         persiste, avisa al administrador.
       </p>
-      <button onClick={reset} className="btn btn-primary mt-8">
-        Reintentar
+      <button onClick={retry} disabled={pending} className="btn btn-primary mt-8">
+        {pending ? "Reintentando…" : "Reintentar"}
       </button>
     </div>
   );

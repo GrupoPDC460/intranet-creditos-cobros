@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "@/lib/supabase-fetch";
 import { hashPassword, generatePassword } from "@/lib/password";
 
 export const ALLOWED_DOMAIN = "@grupopdc.com";
@@ -30,7 +31,7 @@ function admin() {
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
     {
       auth: { persistSession: false },
-      global: { fetch: (i, init) => fetch(i, { ...init, cache: "no-store" }) },
+      global: { fetch: supabaseFetch },
     },
   );
 }
