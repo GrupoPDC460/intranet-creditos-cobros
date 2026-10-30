@@ -28,16 +28,16 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@400;500;600;700&family=Montserrat:wght@400;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
+        {["300", "500", "700", "900"].map((w) => (
+          <link
+            key={w}
+            rel="preload"
+            href={`/fonts/museo-sans-rounded-${w}.woff2`}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
       </head>
       <body className="min-h-screen font-sans antialiased">
         <BrandBackground />

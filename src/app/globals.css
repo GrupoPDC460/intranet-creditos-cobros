@@ -2,15 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tipografía oficial Grupo PDC: Museo Sans Rounded (autoalojada) */
+@font-face {
+  font-family: "Museo Sans Rounded";
+  src: url("/fonts/museo-sans-rounded-300.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo Sans Rounded";
+  src: url("/fonts/museo-sans-rounded-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo Sans Rounded";
+  src: url("/fonts/museo-sans-rounded-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Museo Sans Rounded";
+  src: url("/fonts/museo-sans-rounded-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --font-display: "Nunito", system-ui, sans-serif;
-  --font-body: "Nunito Sans", system-ui, sans-serif;
+  --font-display: "Museo Sans Rounded", "Nunito", system-ui, sans-serif;
+  --font-body: "Museo Sans Rounded", "Nunito Sans", system-ui, sans-serif;
   /* Paleta oficial Grupo PDC */
   --ink: #041338;        /* navy profundo derivado del azul primario */
   --ink-2: #00216f;      /* azul primario oficial (Pantone 2747 C) */
   --brand: #ff5100;      /* naranja de la sonrisa (Orange 021 C) — acento principal */
   --brand-glow: #7dbfe6; /* celeste secundario (637 C) */
-  --gold: #f3b24e;       /* dorado secundario (1365 C) — favoritos/destacados */
+  --gold: #ff7a3c;       /* acento naranja PDC (claro, legible sobre navy) — favoritos/destacados */
   --text: #eef3ff;
   --muted: #9fb0cf;
   --line: rgba(148, 163, 214, 0.14);
@@ -333,13 +363,13 @@
    LOGIN NEUMÓRFICO "Luxury" (Sign In / Sign Up slider) · PDC
    ============================================================ */
 .neu-page {
-  --neu-bg: #f4f1ea;
-  --neu-dark: #ddd9ce;
+  --neu-bg: #f5f7fa;
+  --neu-dark: #d9dfe9;
   --neu-light: #ffffff;
-  --neu-text: #2c2a29;
-  --neu-muted: #8a857f;
+  --neu-text: #0f141b;
+  --neu-muted: #606060;
   --neu-navy: #00216f;
-  --neu-gold: #c5a880;
+  --neu-gold: #ff5100;
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -348,7 +378,7 @@
   justify-content: center;
   padding: 20px;
   background: var(--neu-bg);
-  font-family: "Montserrat", system-ui, sans-serif;
+  font-family: "Museo Sans Rounded", system-ui, sans-serif;
   color: var(--neu-text);
 }
 
@@ -453,7 +483,7 @@
 .neu-btn:active { box-shadow: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light); transform: translateY(1px); }
 .neu-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .neu-btn--solid {
-  background: linear-gradient(160deg, #0a3a9e, var(--neu-navy));
+  background: linear-gradient(160deg, #0a2c7a, var(--neu-navy));
   color: #fff;
   width: 100%;
   box-shadow: 6px 6px 14px var(--neu-dark);
@@ -552,7 +582,7 @@
 }
 .neu-creds__row + .neu-creds__row { border-top: 1px solid rgba(0,0,0,0.06); }
 .neu-creds__k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--neu-muted); }
-.neu-creds__v { font-family: "Montserrat", monospace; font-weight: 700; color: var(--neu-navy); word-break: break-all; }
+.neu-creds__v { font-family: "Museo Sans Rounded", monospace; font-weight: 700; color: var(--neu-navy); word-break: break-all; }
 
 /* ---- Responsive: en móvil, solo iniciar sesión ---- */
 @media (max-width: 640px) {
