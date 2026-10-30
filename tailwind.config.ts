@@ -23,9 +23,10 @@ const config: Config = {
           600: "#D94400",
           glow: "#7DBFE6",
         },
+        // Acento de destacados/favoritos = Naranja PDC (versión clara para fondo navy)
         gold: {
-          DEFAULT: "#F3B24E",
-          soft: "#FFCB6B",
+          DEFAULT: "#FF7A3C",
+          soft: "#FF9A66",
         },
         line: "rgba(148,163,214,0.14)",
         muted: "#9FB0CF",
